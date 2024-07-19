@@ -18,8 +18,8 @@ func New() *UserService {
 	return us
 }
 
-func (us *UserService) GetName() string {
-	return "user"
+func (us *UserService) MountPath() string {
+	return "users"
 }
 
 func (us *UserService) setupControllers() {

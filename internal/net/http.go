@@ -8,12 +8,15 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/pmoieni/rmx/internal/db"
 )
 
 type Service interface {
 	http.Handler
+	db.EntityManager
 
-	GetName() string
+	MountPath() string
 }
 
 type Server struct {
@@ -69,7 +72,7 @@ func homeHandler() http.HandlerFunc {
 func setupControllers(mux *http.ServeMux, services ...Service) {
 	mux.Handle("/", homeHandler())
 	for _, service := range services {
-		mux.Handle("/"+service.GetName(), service)
+		mux.Handle("/"+service.MountPath(), service)
 	}
 }
 
