@@ -14,7 +14,7 @@ import (
 
 type Service interface {
 	http.Handler
-	db.EntityManager
+	db.Repo
 
 	MountPath() string
 }

@@ -4,26 +4,23 @@ import (
 	"net/http"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/pmoieni/rmx/internal/services/jam/internal/repo"
 )
 
 type JamService struct {
 	*http.ServeMux
-	*jamEntity
 
-	db *sqlx.DB
+	repo *repo.JamRepo
 }
 
-func New(db *sqlx.DB) (*JamService, error) {
-	entity, err := NewJamEntity(db)
-	if err != nil {
-		return nil, err
-	}
+func NewService(db *sqlx.DB) (*JamService, error) {
+	repo := repo.NewJamRepo(db)
 
 	js := &JamService{
-		db:        db,
-		jamEntity: entity,
+		repo: repo,
 	}
 	js.setupControllers()
+
 	return js, nil
 }
 
