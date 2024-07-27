@@ -86,8 +86,10 @@ func (r *Repo) Update(ctx context.Context, id uuid.UUID, j *entity.JamDTO) error
 }
 
 func (r *Repo) Delete(ctx context.Context, id uuid.UUID) error {
-    if _, err := r.db.ExecContext(ctx, "UPDATE jams SET (deleted_at) WHERE id==$1",
-        id.String(), time.Now().UTC().Format(time.RFC3339))
+	if _, err := r.db.ExecContext(ctx, "UPDATE jams SET (deleted_at) WHERE id==$1",
+		id.String(), time.Now().UTC().Format(time.RFC3339)); err != nil {
+		return err
+	}
 
 	return nil
 }

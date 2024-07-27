@@ -10,7 +10,7 @@ import (
 type JamService struct {
 	*http.ServeMux
 
-	repo *repo.JamRepo
+	repo repo.JamRepo
 }
 
 func NewService(db *sqlx.DB) (*JamService, error) {
