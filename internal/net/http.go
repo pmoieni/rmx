@@ -8,13 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
-
-	"github.com/pmoieni/rmx/internal/db"
 )
 
 type Service interface {
 	http.Handler
-	db.Repo
 
 	MountPath() string
 }
