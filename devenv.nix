@@ -5,9 +5,13 @@
   # inputs,
   ...
 }: {
+  # env
   env.GREET = "RMX devenv";
+
+  # packages
   packages = [pkgs.git];
 
+  # scripts
   scripts.hello.exec = "echo $GREET";
 
   # startup
@@ -25,6 +29,8 @@
   services.postgres = {
     enable = true;
     initialScript = ''
+      CREATE ROLE postgres SUPERUSER;
+      CREATE ROLE "rmx" WITH LOGIN PASSWORD "rmx";
       CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
       CREATE EXTENSION IF NOT EXISTS "citext";
     '';
