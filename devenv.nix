@@ -13,14 +13,13 @@
   # startup
   enterShell = ''
     hello
-    pg_ctl status
   '';
 
   # tests
-  # enterTest = ''
-  # echo "Running tests"
-  # git --version | grep "2.42.0"
-  # '';
+  enterTest = ''
+    echo "Running tests"
+    git --version
+  '';
 
   # services
   services.postgres = {
