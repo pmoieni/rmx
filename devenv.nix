@@ -31,15 +31,7 @@
     initialScript = ''
       CREATE ROLE postgres SUPERUSER;
       CREATE ROLE "rmx" WITH LOGIN PASSWORD "rmx";
-      CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-      CREATE EXTENSION IF NOT EXISTS "citext";
     '';
-    initialDatabases = [
-      {
-        name = "rmx-test";
-        schema = ./internal/db/migrations/20240727203309_schema.up.sql;
-      }
-    ];
     listen_addresses = "127.0.0.1";
     port = 5432;
     settings = {
