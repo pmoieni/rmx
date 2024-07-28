@@ -8,7 +8,7 @@
   env.GREET = "RMX devenv";
   packages = [pkgs.git];
 
-  scripts.hello.exec = "$GREET";
+  scripts.hello.exec = "echo $GREET";
 
   # startup
   enterShell = ''
