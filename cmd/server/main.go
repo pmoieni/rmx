@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/pmoieni/rmx/internal/config"
+	"github.com/pmoieni/rmx/internal/db"
 	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/services/jam"
 )
@@ -15,7 +15,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err := sqlx.Open("postgres", cfg.DSN)
+	db, err := db.New(cfg.DSN)
 	if err != nil {
 		log.Fatal(err)
 	}

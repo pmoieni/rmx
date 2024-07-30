@@ -1,9 +1,13 @@
 package jam
 
 import (
+	"context"
+	"log"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/pmoieni/rmx/internal/services/jam/internal/entity"
 	"github.com/pmoieni/rmx/internal/services/jam/internal/repo"
 )
 
@@ -15,6 +19,14 @@ type JamService struct {
 
 func NewService(db *sqlx.DB) (*JamService, error) {
 	repo := repo.NewJamRepo(db)
+
+	if err := repo.Create(context.Background(), &entity.JamParams{
+		Name: "test",
+		BPM:  120, Capacity: 5,
+		OwnerID: uuid.NewString(),
+	}); err != nil {
+		log.Fatal(err)
+	}
 
 	js := &JamService{
 		repo: repo,

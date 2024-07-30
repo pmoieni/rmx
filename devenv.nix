@@ -30,6 +30,7 @@
     initialScript = ''
       CREATE ROLE postgres SUPERUSER;
       CREATE ROLE rmx WITH LOGIN PASSWORD 'rmx';
+      CREATE DATABASE "rmx-test" OWNER rmx;
     '';
     listen_addresses = "127.0.0.1";
     port = 5432;

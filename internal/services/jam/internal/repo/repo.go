@@ -30,7 +30,7 @@ func NewJamRepo(db *sqlx.DB) JamRepo {
 
 func (r *Repo) Get(ctx context.Context, id uuid.UUID) (*entity.JamDTO, error) {
 	var jam entity.JamDTO
-	query := `SELECT * FROM jams WHERE id = $1 AND deleted_at IS NULL`
+	query := `SELECT * FROM jam WHERE id = $1 AND deleted_at IS NULL`
 	if err := r.db.GetContext(ctx, &jam, query, id.String()); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.New("jam not found")
@@ -44,7 +44,7 @@ func (r *Repo) Get(ctx context.Context, id uuid.UUID) (*entity.JamDTO, error) {
 
 func (r *Repo) List(ctx context.Context) ([]entity.JamDTO, error) {
 	var jams []entity.JamDTO
-	query := `SELECT * FROM jams WHERE deleted_at IS NULL ORDER BY created_at DESC`
+	query := `SELECT * FROM jam WHERE deleted_at IS NULL ORDER BY created_at DESC`
 	err := r.db.SelectContext(ctx, &jams, query)
 	if err != nil {
 		return nil, err
@@ -55,7 +55,7 @@ func (r *Repo) List(ctx context.Context) ([]entity.JamDTO, error) {
 
 func (r *Repo) Create(ctx context.Context, j *entity.JamParams) error {
 	_, err := r.db.NamedExecContext(ctx, `
-		INSERT INTO jams (name, capacity, bpm, owner_id)
+		INSERT INTO jam (name, capacity, bpm, owner_id)
 		VALUES (:name, :capacity, :bpm, :owner_id)
 	`, j)
 
@@ -82,7 +82,7 @@ func (r *Repo) Update(ctx context.Context, id uuid.UUID, j *entity.JamParams) er
 	}
 
 	if _, err := r.db.ExecContext(ctx,
-		"UPDATE jams SET (name, capacity, bpm, owner_id) WHERE id=$1",
+		"UPDATE jam SET (name, capacity, bpm, owner_id) WHERE id=$1",
 		id.String(),
 		toBeUpdated.Name, toBeUpdated.Capacity, toBeUpdated.BPM, toBeUpdated.OwnerID); err != nil {
 		return err
@@ -92,7 +92,7 @@ func (r *Repo) Update(ctx context.Context, id uuid.UUID, j *entity.JamParams) er
 }
 
 func (r *Repo) Delete(ctx context.Context, id uuid.UUID) error {
-	if _, err := r.db.ExecContext(ctx, "UPDATE jams SET (deleted_at) WHERE id==$1",
+	if _, err := r.db.ExecContext(ctx, "UPDATE jam SET (deleted_at) WHERE id==$1",
 		id.String(), time.Now().UTC().Format(time.RFC3339)); err != nil {
 		return err
 	}
