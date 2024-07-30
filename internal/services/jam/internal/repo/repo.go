@@ -9,15 +9,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	"github.com/pmoieni/rmx/internal/lib"
 	"github.com/pmoieni/rmx/internal/services/jam/internal/entity"
 )
 
 type JamRepo interface {
 	Get(context.Context, uuid.UUID) (*entity.JamDTO, error)
 	List(context.Context) ([]entity.JamDTO, error)
-	Create(context.Context, *entity.JamCreateParams) error
-	Update(context.Context, uuid.UUID, *entity.JamUpdateParams) error
+	Create(context.Context, *entity.JamParams) error
+	Update(context.Context, uuid.UUID, *entity.JamParams) error
 	Delete(context.Context, uuid.UUID) error
 }
 

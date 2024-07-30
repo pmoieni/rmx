@@ -22,7 +22,7 @@ type Server struct {
 
 type ServerFlags struct {
 	Host string
-	Port int
+	Port uint
 }
 
 func NewServer(flags *ServerFlags, services ...Service) *Server {
