@@ -6,18 +6,17 @@
   ...
 }: {
   # env
-  env.GREET = "RMX devenv";
+  # env.GREET = "RMX devenv";
 
   # packages
   packages = [pkgs.git];
 
   # scripts
-  scripts.hello.exec = "echo $GREET";
+  scripts.flush.exec = "devenv processes down; rm -rf ./.devenv/state/*; devenv up -d";
 
   # startup
-  enterShell = ''
-    hello
-  '';
+  # enterShell = ''
+  # '';
 
   # tests
   enterTest = ''
@@ -30,7 +29,7 @@
     enable = true;
     initialScript = ''
       CREATE ROLE postgres SUPERUSER;
-      CREATE ROLE "rmx" WITH LOGIN PASSWORD "rmx";
+      CREATE ROLE rmx WITH LOGIN PASSWORD 'rmx';
     '';
     listen_addresses = "127.0.0.1";
     port = 5432;

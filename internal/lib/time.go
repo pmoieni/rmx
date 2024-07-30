@@ -17,3 +17,7 @@ func (jt *JSONTime) UnmarshalJSON(bs []byte) error {
 	*jt = JSONTime(parsed)
 	return nil
 }
+
+func Time() JSONTime {
+	return JSONTime(time.Now().UTC())
+}

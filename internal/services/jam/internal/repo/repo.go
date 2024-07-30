@@ -2,19 +2,22 @@ package repo
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/pmoieni/rmx/internal/lib"
 	"github.com/pmoieni/rmx/internal/services/jam/internal/entity"
 )
 
 type JamRepo interface {
 	Get(context.Context, uuid.UUID) (*entity.JamDTO, error)
 	List(context.Context) ([]entity.JamDTO, error)
-	Create(context.Context, *entity.JamDTO) error
-	Update(context.Context, uuid.UUID, *entity.JamDTO) error
+	Create(context.Context, *entity.JamCreateParams) error
+	Update(context.Context, uuid.UUID, *entity.JamUpdateParams) error
 	Delete(context.Context, uuid.UUID) error
 }
 
@@ -28,7 +31,12 @@ func NewJamRepo(db *sqlx.DB) JamRepo {
 
 func (r *Repo) Get(ctx context.Context, id uuid.UUID) (*entity.JamDTO, error) {
 	var jam entity.JamDTO
-	if err := r.db.GetContext(ctx, &jam, "SELECT * FROM jams WHERE id=$1", id.String()); err != nil {
+	query := `SELECT * FROM jams WHERE id = $1 AND deleted_at IS NULL`
+	if err := r.db.GetContext(ctx, &jam, query, id.String()); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.New("jam not found")
+		}
+
 		return nil, err
 	}
 
@@ -36,29 +44,26 @@ func (r *Repo) Get(ctx context.Context, id uuid.UUID) (*entity.JamDTO, error) {
 }
 
 func (r *Repo) List(ctx context.Context) ([]entity.JamDTO, error) {
-	return []entity.JamDTO{}, nil
-}
-
-/*
-	type Jam struct {
-		ID       uuid.UUID
-		Name     string
-		Capacity uint
-		BPM      uint
-		Owner    *JamOwner
-	}
-*/
-func (r *Repo) Create(ctx context.Context, j *entity.JamDTO) error {
-	if _, err := r.db.ExecContext(ctx,
-		"INSERT INTO jams (id, name, capacity, bpm, owner_id)",
-		j.ID, j.Name, j.Capacity, j.BPM, j.OwnerID); err != nil {
-		return err
+	var jams []entity.JamDTO
+	query := `SELECT * FROM jams WHERE deleted_at IS NULL ORDER BY created_at DESC`
+	err := r.db.SelectContext(ctx, &jams, query)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	return jams, nil
 }
 
-func (r *Repo) Update(ctx context.Context, id uuid.UUID, j *entity.JamDTO) error {
+func (r *Repo) Create(ctx context.Context, j *entity.JamParams) error {
+	_, err := r.db.NamedExecContext(ctx, `
+		INSERT INTO jams (name, capacity, bpm, owner_id)
+		VALUES (:name, :capacity, :bpm, :owner_id)
+	`, j)
+
+	return err
+}
+
+func (r *Repo) Update(ctx context.Context, id uuid.UUID, j *entity.JamParams) error {
 	jam, err := r.Get(ctx, id)
 	if err != nil {
 		return err
@@ -77,7 +82,9 @@ func (r *Repo) Update(ctx context.Context, id uuid.UUID, j *entity.JamDTO) error
 		return err
 	}
 
-	if _, err := r.db.ExecContext(ctx, "UPDATE jams SET (name, capacity, bpm, owner_id) WHERE id=$1", id.String(),
+	if _, err := r.db.ExecContext(ctx,
+		"UPDATE jams SET (name, capacity, bpm, owner_id) WHERE id=$1",
+		id.String(),
 		toBeUpdated.Name, toBeUpdated.Capacity, toBeUpdated.BPM, toBeUpdated.OwnerID); err != nil {
 		return err
 	}

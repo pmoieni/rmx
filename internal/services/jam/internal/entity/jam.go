@@ -13,15 +13,19 @@ type Jam struct {
 	Owner    *JamOwner
 }
 
+type JamParams struct {
+	Name     string `db:"name" json:"name"`
+	Capacity uint   `db:"capacity" json:"capacity"`
+	BPM      uint   `db:"bpm" json:"bpm"`
+	OwnerID  string `db:"owner_id" json:"owner_id"`
+}
+
 type JamDTO struct {
-	ID        string       `json:"id"`
-	Name      string       `json:"name"`
-	Capacity  uint         `json:"capacity"`
-	BPM       uint         `json:"bpm"`
-	OwnerID   string       `json:"owner_id"`
-	CreatedAt lib.JSONTime `json:"created_at"`
-	UpdatedAt lib.JSONTime `json:"updated_at"`
-	DeletedAt lib.JSONTime `json:"deleted_at"`
+	JamParams
+	ID        string       `db:"id" json:"id"`
+	CreatedAt lib.JSONTime `db:"created_at" json:"created_at"`
+	UpdatedAt lib.JSONTime `db:"updated_at" json:"updated_at"`
+	DeletedAt lib.JSONTime `db:"deleted_at" json:"deleted_at"`
 }
 
 type JamOwner struct {
