@@ -15,12 +15,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err := db.New(cfg.DSN)
+	dbHandle, err := db.NewDB(cfg.DSN)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	jamService, err := jam.NewService(db)
+	jamService, err := jam.NewService(db.NewJamRepo(dbHandle))
 	if err != nil {
 		log.Fatal(err)
 	}

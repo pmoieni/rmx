@@ -12,7 +12,7 @@ import (
 //go:embed migrations/*.sql
 var fs embed.FS
 
-func New(dsn string) (*sqlx.DB, error) {
+func NewDB(dsn string) (*sqlx.DB, error) {
 	db, err := sqlx.Open("postgres", dsn)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,8 @@
-package entity
+package jam
 
 import (
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/pmoieni/rmx/internal/lib"
 )
@@ -11,6 +13,11 @@ type Jam struct {
 	Capacity uint
 	BPM      uint
 	Owner    *JamOwner
+}
+
+type JamOwner struct {
+	UserID   uuid.UUID
+	Username string
 }
 
 type JamParams struct {
@@ -28,7 +35,10 @@ type JamDTO struct {
 	DeletedAt lib.JSONTime `db:"deleted_at" json:"deleted_at"`
 }
 
-type JamOwner struct {
-	UserID   uuid.UUID
-	Username string
+type JamRepo interface {
+	Get(context.Context, uuid.UUID) (*JamDTO, error)
+	List(context.Context) ([]JamDTO, error)
+	Create(context.Context, *JamParams) error
+	Update(context.Context, uuid.UUID, *JamParams) error
+	Delete(context.Context, uuid.UUID) error
 }
