@@ -5,10 +5,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
+	"github.com/pmoieni/rmx/internal/lib"
 	"github.com/pmoieni/rmx/internal/services/jam"
 )
 
@@ -46,6 +46,10 @@ func (r *JamRepo) List(ctx context.Context) ([]jam.JamDTO, error) {
 }
 
 func (r *JamRepo) Create(ctx context.Context, j *jam.JamParams) error {
+	if err := j.Validate(false); err != nil {
+		return err
+	}
+
 	_, err := r.db.NamedExecContext(ctx, `
 		INSERT INTO jam (name, capacity, bpm, owner_id)
 		VALUES (:name, :capacity, :bpm, :owner_id)
@@ -55,6 +59,10 @@ func (r *JamRepo) Create(ctx context.Context, j *jam.JamParams) error {
 }
 
 func (r *JamRepo) Update(ctx context.Context, id uuid.UUID, j *jam.JamParams) error {
+	if err := j.Validate(true); err != nil {
+		return err
+	}
+
 	jam, err := r.Get(ctx, id)
 	if err != nil {
 		return err
@@ -85,7 +93,7 @@ func (r *JamRepo) Update(ctx context.Context, id uuid.UUID, j *jam.JamParams) er
 
 func (r *JamRepo) Delete(ctx context.Context, id uuid.UUID) error {
 	if _, err := r.db.ExecContext(ctx, "UPDATE jam SET (deleted_at) WHERE id==$1",
-		id.String(), time.Now().UTC().Format(time.RFC3339)); err != nil {
+		id.String(), lib.GetJSONTime().ToSTDTime()); err != nil {
 		return err
 	}
 
