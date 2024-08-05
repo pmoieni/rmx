@@ -12,6 +12,13 @@ type Config struct {
 	ServerPort uint   `json:"serverPort"`
 	DSN        string `json:"dsn"`
 	Dev        bool   `json:"dev"`
+	OAuth      struct {
+		Google struct {
+			ClientID     string `json:"clientID"`
+			ClientSecret string `json:"clientSecret"`
+		} `json:"google"`
+		RedirectURL string `json:"redirectURL"`
+	} `json:"oauth"`
 }
 
 const (
