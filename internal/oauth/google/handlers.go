@@ -16,9 +16,6 @@ var (
 	defaultScopes      = []string{"profile", "email"}
 )
 
-type UserInfo struct {
-}
-
 type Provider struct {
 	*oauth2.Config
 
@@ -72,44 +69,40 @@ func (gp *Provider) SetScopes(scopes []string) {
 	gp.Scopes = append(gp.Scopes, scopes...)
 }
 
-func (gp *Provider) HandleAuthorizationRequest() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		state, err := lib.RandomString(stateLength)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		http.Redirect(w, r, gp.AuthCodeURL(state, oauth2.AccessTypeOffline), http.StatusTemporaryRedirect)
+func (gp *Provider) HandleAuthorizationRequest(w http.ResponseWriter, r *http.Request) {
+	state, err := lib.RandomString(stateLength)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
+
+	http.Redirect(w, r, gp.AuthCodeURL(state, oauth2.AccessTypeOffline), http.StatusTemporaryRedirect)
 }
 
-func (gp *Provider) HandleCallbackRequest() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		code := r.URL.Query().Get("code")
+func (gp *Provider) HandleCallbackRequest(w http.ResponseWriter, r *http.Request) {
+	code := r.URL.Query().Get("code")
 
-		token, err := gp.Exchange(r.Context(), code)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		userInfo, err := gp.oidc.UserInfo(r.Context(), oauth2.StaticTokenSource(token))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		resp := struct {
-			OAuth2Token *oauth2.Token
-			UserInfo    *oidc.UserInfo
-		}{token, userInfo}
-		data, err := json.MarshalIndent(resp, "", "    ")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		w.Write(data)
+	token, err := gp.Exchange(r.Context(), code)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+
+	userInfo, err := gp.oidc.UserInfo(r.Context(), oauth2.StaticTokenSource(token))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resp := struct {
+		Token    *oauth2.Token  `json:"token"`
+		UserInfo *oidc.UserInfo `json:"userInfo"`
+	}{token, userInfo}
+	data, err := json.MarshalIndent(resp, "", "\t")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(data)
 }

@@ -41,7 +41,7 @@ type JamParams struct {
 	Name     string `db:"name" json:"name"`
 	Capacity uint   `db:"capacity" json:"capacity"`
 	BPM      uint   `db:"bpm" json:"bpm"`
-	OwnerID  string `db:"owner_id" json:"owner_id"`
+	OwnerID  string `db:"owner_id" json:"ownerId"`
 }
 
 func (jp *JamParams) Validate(nullable bool) error {
@@ -84,9 +84,9 @@ func (jp *JamParams) trim() {
 type JamDTO struct {
 	JamParams
 	ID        string       `db:"id" json:"id"`
-	CreatedAt lib.JSONTime `db:"created_at" json:"created_at"`
-	UpdatedAt lib.JSONTime `db:"updated_at" json:"updated_at"`
-	DeletedAt lib.JSONTime `db:"deleted_at" json:"deleted_at"`
+	CreatedAt lib.JSONTime `db:"created_at" json:"createdAt"`
+	UpdatedAt lib.JSONTime `db:"updated_at" json:"updatedAt"`
+	DeletedAt lib.JSONTime `db:"deleted_at" json:"deletedAt"`
 }
 
 type JamRepo interface {

@@ -16,12 +16,32 @@ type Provider interface {
 	SetRedirectURL(string)
 	SetScope(string)
 
-	HandleAuthorizationRequest() http.HandlerFunc
-	HandleCallbackRequest() http.HandlerFunc
+	HandleAuthorizationRequest(http.ResponseWriter, *http.Request)
+	HandleCallbackRequest(http.ResponseWriter, *http.Request)
 }
 
 type ClientStore struct {
 	sync.RWMutex
 
 	clients map[string]Provider
+}
+
+func NewClientStore() *ClientStore {
+	return &ClientStore{
+		clients: make(map[string]Provider),
+	}
+}
+
+func (cs *ClientStore) AddProvider(name string, provider Provider) {
+	cs.Lock()
+	defer cs.Unlock()
+
+	cs.clients[name] = provider
+}
+
+func (cs *ClientStore) GetProvider(name string) Provider {
+	cs.RLock()
+	defer cs.RUnlock()
+
+	return cs.clients[name]
 }

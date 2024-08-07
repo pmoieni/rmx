@@ -1,53 +1,43 @@
 package user
 
 import (
-	"net/http"
+	"context"
+	"strings"
+
+	"github.com/google/uuid"
+	"github.com/pmoieni/rmx/internal/lib"
 )
 
-type UserService struct {
-	*http.ServeMux
-
-	repo UserRepo
+type User struct {
+	ID            uuid.UUID
+	Username      string
+	Email         string
+	EmailVerified bool
 }
 
-func NewService(repo UserRepo) (*UserService, error) {
-	js := &UserService{
-		repo: repo,
-	}
-	js.setupControllers()
-
-	return js, nil
+type UserParams struct {
+	Username      string `db:"username" json:"username"`
+	Email         string `db:"email" json:"email"`
+	EmailVerified bool   `db:"email_verified" json:"emailVerified"`
 }
 
-func (js *UserService) MountPath() string {
-	return "users"
+func (up *UserParams) trim() {
+	up.Username = strings.TrimSpace(up.Username)
+	up.Email = strings.TrimSpace(up.Email)
 }
 
-func (js *UserService) setupControllers() {
-	js.Handle("POST /me", handleUserInfo())
-	js.Handle("GET /auth/login", handleLogin())
-	js.Handle("GET /auth/callback", handleCallback())
+type UserDTO struct {
+	UserParams
+	ID        string       `db:"id" json:"id"`
+	CreatedAt lib.JSONTime `db:"created_at" json:"createdAt"`
+	UpdatedAt lib.JSONTime `db:"updated_at" json:"updatedAt"`
+	DeletedAt lib.JSONTime `db:"deleted_at" json:"deletedAt"`
 }
 
-func handleUserInfo() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-	}
-}
-
-func handleLogin() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		provider := getProvider()
-	}
-}
-
-// handleConn gets the Jam info and establishes a websocket connection
-func handleCallback() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		provider := getProvider()
-	}
-}
-
-func getProvider(r *http.Request) string {
-	return r.URL.Query().Get("provider")
+type UserRepo interface {
+	Get(context.Context, uuid.UUID) (*UserDTO, error)
+	List(context.Context) ([]UserDTO, error)
+	Create(context.Context, *UserParams) error
+	Update(context.Context, uuid.UUID, *UserParams) error
+	Delete(context.Context, uuid.UUID) error
 }
