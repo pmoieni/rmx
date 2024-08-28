@@ -1,23 +1,24 @@
 package oauth
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"sync"
 )
 
 type Provider interface {
-	GetClientID() string
-	GetClientSecret() string
-	GetRedirectURL() string
-	GetScope() string
+	HandleAuthorizationRequest(http.ResponseWriter, *http.Request) http.HandlerFunc
+	GetCallbackResult(*http.Request) (*CallbackResult, error)
+	VerifyAccessToken(context.Context, string) error
+}
 
-	SetClientID(string)
-	SetClientSecret(string)
-	SetRedirectURL(string)
-	SetScope(string)
-
-	HandleAuthorizationRequest(http.ResponseWriter, *http.Request)
-	HandleCallbackRequest(http.ResponseWriter, *http.Request)
+type CallbackResult struct {
+	Issuer        string
+	UserID        string
+	Email         string
+	EmailVerified bool
+	Token         string
 }
 
 type ClientStore struct {
@@ -39,9 +40,14 @@ func (cs *ClientStore) AddProvider(name string, provider Provider) {
 	cs.clients[name] = provider
 }
 
-func (cs *ClientStore) GetProvider(name string) Provider {
+func (cs *ClientStore) GetProvider(name string) (Provider, error) {
 	cs.RLock()
 	defer cs.RUnlock()
 
-	return cs.clients[name]
+	provider, ok := cs.clients[name]
+	if !ok {
+		return nil, errors.New("invalid name for provider")
+	}
+
+	return provider, nil
 }

@@ -4,9 +4,9 @@ import (
 	"log"
 
 	"github.com/pmoieni/rmx/internal/config"
-	"github.com/pmoieni/rmx/internal/db"
 	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/services/jam"
+	"github.com/pmoieni/rmx/internal/store"
 )
 
 func main() {
@@ -15,12 +15,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	dbHandle, err := db.NewDB(cfg.DSN)
+	dbHandle, err := store.NewDB(cfg.DSN)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	jamService, err := jam.NewService(db.NewJamRepo(dbHandle))
+	jamService, err := jam.NewService(store.NewJamRepo(dbHandle))
 	if err != nil {
 		log.Fatal(err)
 	}

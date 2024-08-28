@@ -2,42 +2,43 @@ package user
 
 import (
 	"context"
-	"strings"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/pmoieni/rmx/internal/lib"
+	userStore "github.com/pmoieni/rmx/internal/store/user"
 )
 
 type User struct {
-	ID            uuid.UUID
-	Username      string
-	Email         string
-	EmailVerified bool
+	ID        uuid.UUID
+	Username  string
+	Email     string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
 }
 
-type UserParams struct {
-	Username      string `db:"username" json:"username"`
-	Email         string `db:"email" json:"email"`
-	EmailVerified bool   `db:"email_verified" json:"emailVerified"`
-}
-
-func (up *UserParams) trim() {
-	up.Username = strings.TrimSpace(up.Username)
-	up.Email = strings.TrimSpace(up.Email)
-}
-
-type UserDTO struct {
-	UserParams
-	ID        string       `db:"id" json:"id"`
-	CreatedAt lib.JSONTime `db:"created_at" json:"createdAt"`
-	UpdatedAt lib.JSONTime `db:"updated_at" json:"updatedAt"`
-	DeletedAt lib.JSONTime `db:"deleted_at" json:"deletedAt"`
+type Connection struct {
+	ID        string
+	UserID    uuid.UUID
+	Provider  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
 }
 
 type UserRepo interface {
-	Get(context.Context, uuid.UUID) (*UserDTO, error)
-	List(context.Context) ([]UserDTO, error)
-	Create(context.Context, *UserParams) error
-	Update(context.Context, uuid.UUID, *UserParams) error
-	Delete(context.Context, uuid.UUID) error
+	GetUserByID(context.Context, uuid.UUID) (*userStore.UserDTO, error)
+	GetUserByEmail(context.Context, string) (*userStore.UserDTO, error)
+	CreateUser(context.Context, *userStore.UserParams) (*userStore.UserDTO, error)
+	UpdateUser(context.Context, uuid.UUID, *userStore.UserParams) (*userStore.UserDTO, error)
+	DeleteUser(context.Context, uuid.UUID) error
+
+	GetConnectionByConnectionID(context.Context, string) (*userStore.ConnectionDTO, error)
+	GetConnectionsByUserID(context.Context, uuid.UUID) ([]userStore.ConnectionDTO, error)
+	CreateConnection(context.Context, *userStore.ConnectionParams) (*userStore.ConnectionDTO, error)
+	UpdateConnection(context.Context, string, *userStore.ConnectionParams) error
+	DeleteConnection(context.Context, string) error
+
+	Blacklist(context.Context, userStore.BlacklistType, string, time.Duration) error
+	IsBlacklisted(context.Context, userStore.BlacklistType, string) (bool, error)
 }

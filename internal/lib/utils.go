@@ -18,6 +18,20 @@ func Pipe[T any](in T, list ...func(T) error) error {
 	return errors.Join(errs...)
 }
 
+type StringAsBool bool
+
+func (sb *StringAsBool) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "true", `"true"`:
+		*sb = true
+	case "false", `"false"`:
+		*sb = false
+	default:
+		return errors.New("invalid value for boolean")
+	}
+	return nil
+}
+
 func init() {
 	assertAvailablePRNG()
 }

@@ -1,19 +1,36 @@
-package db
+package store
 
 import (
 	"embed"
+	"errors"
+	"fmt"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/pgx"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
 	"github.com/jmoiron/sqlx"
 )
+
+var (
+	ErrConflict = errors.New("store: entity already exists")
+	ErrNotFound = errors.New("store: entity not found")
+)
+
+type StoreErr struct {
+	Code    int
+	Message string
+	Err     error
+}
+
+func (e *StoreErr) Error() string {
+	return fmt.Sprintf("[Store Error]\nError Code: %d\nError Message: %s\nError: %s\n", e.Code, e.Message, e.Err)
+}
 
 //go:embed migrations/*.sql
 var fs embed.FS
 
 func NewDB(dsn string) (*sqlx.DB, error) {
-	db, err := sqlx.Open("postgres", dsn)
+	db, err := sqlx.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}

@@ -1,16 +1,22 @@
 package jam
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/pmoieni/rmx/internal/lib"
+)
 
 type JamService struct {
 	*http.ServeMux
 
 	repo JamRepo
+	log  *lib.Logger
 }
 
 func NewService(repo JamRepo) (*JamService, error) {
 	js := &JamService{
 		repo: repo,
+		log:  lib.NewLogger("jam"),
 	}
 	js.setupControllers()
 

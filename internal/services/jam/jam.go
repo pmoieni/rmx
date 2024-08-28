@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
-	"github.com/pmoieni/rmx/internal/lib"
 )
 
 var (
@@ -16,83 +16,67 @@ var (
 	minCapacity   uint = 3
 	maxBPM        uint = 500
 	minBPM        uint = 15
-	ownerIDLength      = 19 // uuid v4 length
 
 	invalidNameError     = errors.New("invalid value for Name in JamParams")
 	invalidCapacityError = errors.New("invalid value for Capacity in JamParams")
 	invalidBPMError      = errors.New("invalid value for BPM in JamParams")
-	invalidOwnerIDError  = errors.New("invalid value for OwnerID in JamParams")
 )
 
 type Jam struct {
-	ID       uuid.UUID
-	Name     string
-	Capacity uint
-	BPM      uint
-	Owner    *JamOwner
-}
-
-type JamOwner struct {
-	UserID   uuid.UUID
-	Username string
+	ID        uuid.UUID
+	Name      string
+	Capacity  uint
+	BPM       uint
+	Owner     *JamOwner
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	DeletedAt time.Time
 }
 
 type JamParams struct {
-	Name     string `db:"name" json:"name"`
-	Capacity uint   `db:"capacity" json:"capacity"`
-	BPM      uint   `db:"bpm" json:"bpm"`
-	OwnerID  string `db:"owner_id" json:"ownerId"`
+	Name     string
+	Capacity uint
+	BPM      uint
+	OwnerID  uuid.UUID
 }
 
-func (jp *JamParams) Validate(nullable bool) error {
-	jp.trim()
+type JamOwner struct {
+	ID       uuid.UUID
+	Username string
+	Email    string
+}
+
+func (p *JamParams) Validate(nullable bool) error {
+	p.trim()
 
 	if !nullable {
-		if jp.Name == "" {
+		if p.Name == "" {
 			return invalidNameError
-		}
-
-		if jp.OwnerID == "" {
-			return invalidOwnerIDError
 		}
 	}
 
-	if len(jp.Name) < minNameLength || len(jp.Name) > maxNameLength {
+	if len(p.Name) < minNameLength || len(p.Name) > maxNameLength {
 		return invalidNameError
 	}
 
-	if jp.Capacity < minCapacity || jp.Capacity > maxCapacity {
+	if p.Capacity < minCapacity || p.Capacity > maxCapacity {
 		return invalidCapacityError
 	}
 
-	if jp.BPM < minBPM || jp.BPM > maxBPM {
+	if p.BPM < minBPM || p.BPM > maxBPM {
 		return invalidBPMError
-	}
-
-	if len(jp.OwnerID) != ownerIDLength {
-		return invalidOwnerIDError
 	}
 
 	return nil
 }
 
-func (jp *JamParams) trim() {
-	jp.Name = strings.TrimSpace(jp.Name)
-	jp.OwnerID = strings.TrimSpace(jp.OwnerID)
-}
-
-type JamDTO struct {
-	JamParams
-	ID        string       `db:"id" json:"id"`
-	CreatedAt lib.JSONTime `db:"created_at" json:"createdAt"`
-	UpdatedAt lib.JSONTime `db:"updated_at" json:"updatedAt"`
-	DeletedAt lib.JSONTime `db:"deleted_at" json:"deletedAt"`
+func (p *JamParams) trim() {
+	p.Name = strings.TrimSpace(p.Name)
 }
 
 type JamRepo interface {
-	Get(context.Context, uuid.UUID) (*JamDTO, error)
-	List(context.Context) ([]JamDTO, error)
-	Create(context.Context, *JamParams) error
-	Update(context.Context, uuid.UUID, *JamParams) error
-	Delete(context.Context, uuid.UUID) error
+	GetJam(context.Context, uuid.UUID) (*Jam, error)
+	CreateJam(context.Context, *JamParams) error
+	UpdateJam(context.Context, uuid.UUID, *JamParams) error
+	DeleteJam(context.Context, uuid.UUID) error
 }
