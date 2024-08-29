@@ -10,9 +10,9 @@ import (
 	"github.com/lucasepe/codename"
 	"github.com/pmoieni/rmx/internal/lib"
 	"github.com/pmoieni/rmx/internal/oauth"
+	"github.com/pmoieni/rmx/internal/services/user/internal/token"
 	"github.com/pmoieni/rmx/internal/store"
 	userStore "github.com/pmoieni/rmx/internal/store/user"
-	"github.com/pmoieni/rmx/internal/token"
 )
 
 var (
@@ -134,10 +134,16 @@ func handleCallback(repo UserRepo, ocs *oauth.ClientStore) http.HandlerFunc {
 			}
 		}
 
-		if err := setTokens(w, r, user.ID.String(), user.Email); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		if err := setToken(w, r, "rmx_at", user.ID.String(), res.Email, accessTokenExpiry); err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
+
+		if err := setToken(w, r, "rmx_rt", user.ID.String(), res.Email, refreshTokenExpiry); err != nil {
+			http.Error(w, err.Error(), http.StatusForbidden)
+			return
+		}
+
 	}
 }
 

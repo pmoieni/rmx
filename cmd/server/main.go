@@ -6,7 +6,11 @@ import (
 	"github.com/pmoieni/rmx/internal/config"
 	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/services/jam"
+	"github.com/pmoieni/rmx/internal/services/user"
 	"github.com/pmoieni/rmx/internal/store"
+
+	jamStore "github.com/pmoieni/rmx/internal/store/jam"
+	userStore "github.com/pmoieni/rmx/internal/store/user"
 )
 
 func main() {
@@ -20,7 +24,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	jamService, err := jam.NewService(store.NewJamRepo(dbHandle))
+	jamService, err := jam.NewService(jamStore.NewJamRepo(dbHandle))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	userService, err := user.NewService(userStore.NewUserRepo(dbHandle))
 	if err != nil {
 		log.Fatal(err)
 	}
