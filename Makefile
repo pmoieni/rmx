@@ -1,3 +1,7 @@
+##############
+# DEPRECATED #
+# ############
+
 SHELL=/usr/bin/env bash -e -o pipefail
 PWD = $(shell pwd)
 GO_BUILD= go build

@@ -6,7 +6,7 @@
   ...
 }: {
   # env
-  # env.GREET = "RMX devenv";
+  env.GREET = "RMX devenv";
 
   # packages
   packages = [pkgs.git];
@@ -15,14 +15,16 @@
   scripts.flush.exec = "devenv processes down; rm -rf ./.devenv/state/*; devenv up -d";
 
   # startup
-  # enterShell = ''
-  # '';
-
-  # tests
-  enterTest = ''
-    echo "Running tests"
+  enterShell = ''
+    echo "git: "
     git --version
   '';
+
+  # tests
+  # enterTest = ''
+  #  echo "Running tests"
+  #  git --version
+  # '';
 
   # services
   services.postgres = {
@@ -45,11 +47,21 @@
 
   # languages
   languages.nix.enable = true;
-  # languages.go.enable = true;
+  languages.go.enable = true;
 
   # pre-commit hooks
-  # pre-commit.hooks.shellcheck.enable = true;
+  git-hooks.hooks = {
+    shellcheck.enable = true;
+    gofmt.enable = true;
+    golines.enable = true;
+    revive.enable = true;
+    govet.enable = true;
+    gotest.enable = true;
+  };
 
   # processes
-  # processes.ping.exec = "ping example.com";
+  # processes.ping.exec = "ping example.com";  # temp fix
+
+  # temp fix
+  cachix.enable = false;
 }

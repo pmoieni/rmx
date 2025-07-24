@@ -93,7 +93,7 @@ func handleCallback(repo UserRepo, ocs *oauth.ClientStore) http.HandlerFunc {
 		}
 
 		if !res.EmailVerified {
-			http.Error(w, errors.New("email not verified.").Error(), http.StatusForbidden)
+			http.Error(w, errors.New("email not verified").Error(), http.StatusForbidden)
 			return
 		}
 

@@ -8,16 +8,6 @@ import (
 	"io"
 )
 
-func Pipe[T any](in T, list ...func(T) error) error {
-	var errs []error
-
-	for _, f := range list {
-		errs = append(errs, f(in))
-	}
-
-	return errors.Join(errs...)
-}
-
 type StringAsBool bool
 
 func (sb *StringAsBool) UnmarshalJSON(b []byte) error {
