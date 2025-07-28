@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/pmoieni/rmx/internal/config"
 	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/oauth"
@@ -25,6 +26,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	cache, err := badger.Open(badger.DefaultOptions("/tmp/badger/rmx"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	jamRepo := jamStore.NewJamRepo(dbHandle)
 
 	jamService, err := jam.NewService(jamRepo)
@@ -33,8 +39,8 @@ func main() {
 	}
 
 	userRepo := userStore.NewUserRepo(dbHandle)
-	connectionRepo := ""
-	tokenRepo := ""
+	connectionRepo := userStore.NewConnectionRepo(dbHandle)
+	tokenRepo := userStore.NewTokenRepo(cache)
 	clientStore := oauth.NewClientStore()
 
 	userService, err := user.NewService(userRepo, connectionRepo, tokenRepo, clientStore)

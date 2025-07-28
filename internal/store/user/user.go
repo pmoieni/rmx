@@ -62,21 +62,6 @@ func (p *UserParams) trim() {
 	p.Email = strings.TrimSpace(p.Email)
 }
 
-type ConnectionDTO struct {
-	ID        string    `db:"id"`
-	UserID    uuid.UUID `db:"user_id"`
-	Provider  string    `db:"provider"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-	DeletedAt time.Time `db:"deleted_at"`
-}
-
-type ConnectionParams struct {
-	ID       string
-	UserID   uuid.UUID
-	Provider string
-}
-
 func (r *UserRepo) GetUserByID(ctx context.Context, id uuid.UUID) (*UserDTO, error) {
 	var u UserDTO
 	query := `SELECT id, username, email, created_at, updated_at, deleted_at
@@ -128,17 +113,20 @@ func (r *UserRepo) CreateUser(ctx context.Context, u *UserParams) (*UserDTO, err
 	return newUser, nil
 }
 
-func (r *UserRepo) UpdateUser(ctx context.Context, id uuid.UUID, u *UserParams) error {
+func (r *UserRepo) UpdateUser(ctx context.Context, id uuid.UUID, u *UserParams) (*UserDTO, error) {
 	if err := u.Validate(); err != nil {
-		return err
+		return nil, err
 	}
 
+	var updatedUser *UserDTO
 	query := `UPDATE users
         SET (username = $2, email = $3)
         WHERE id=$1`
-	_, err := r.db.ExecContext(ctx, query, id.String(), u.Username, u.Email)
+	if err := r.db.QueryRowContext(ctx, query, id.String(), u.Username, u.Email).Scan(&updatedUser); err != nil {
+		return nil, err
+	}
 
-	return err
+	return updatedUser, nil
 }
 
 func (r *UserRepo) DeleteUser(ctx context.Context, id uuid.UUID) error {
@@ -150,7 +138,30 @@ func (r *UserRepo) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-func (r *UserRepo) GetConnectionByConnectionID(
+type ConnectionDTO struct {
+	ID        string    `db:"id"`
+	UserID    uuid.UUID `db:"user_id"`
+	Provider  string    `db:"provider"`
+	CreatedAt time.Time `db:"created_at"`
+	UpdatedAt time.Time `db:"updated_at"`
+	DeletedAt time.Time `db:"deleted_at"`
+}
+
+type ConnectionParams struct {
+	ID       string
+	UserID   uuid.UUID
+	Provider string
+}
+
+type ConnectionRepo struct {
+	db *sqlx.DB
+}
+
+func NewConnectionRepo(db *sqlx.DB) *ConnectionRepo {
+	return &ConnectionRepo{db}
+}
+
+func (r *ConnectionRepo) GetConnectionByConnectionID(
 	ctx context.Context,
 	id string,
 ) (*ConnectionDTO, error) {
@@ -170,14 +181,14 @@ func (r *UserRepo) GetConnectionByConnectionID(
 	return &c, nil
 }
 
-func (r *UserRepo) GetConnectionsByUserID(
+func (r *ConnectionRepo) GetConnectionsByUserID(
 	ctx context.Context,
 	id uuid.UUID,
 ) ([]ConnectionDTO, error) {
 	return []ConnectionDTO{}, nil
 }
 
-func (r *UserRepo) CreateConnection(
+func (r *ConnectionRepo) CreateConnection(
 	ctx context.Context,
 	c *ConnectionParams,
 ) (*ConnectionDTO, error) {
@@ -193,7 +204,7 @@ func (r *UserRepo) CreateConnection(
 	return newConnection, nil
 }
 
-func (r *UserRepo) UpdateConnection(ctx context.Context, id string, c *ConnectionParams) error {
+func (r *ConnectionRepo) UpdateConnection(ctx context.Context, id string, c *ConnectionParams) error {
 	query := `UPDATE connections
         SET (id = $2, user_id = $3, provider = $4)
         WHERE id=$1`
@@ -202,7 +213,7 @@ func (r *UserRepo) UpdateConnection(ctx context.Context, id string, c *Connectio
 	return err
 }
 
-func (r *UserRepo) DeleteConnection(ctx context.Context, id string) error {
+func (r *ConnectionRepo) DeleteConnection(ctx context.Context, id string) error {
 	query := `UPDATE connections
         SET (deleted_at = $2)
         WHERE id==$1`
@@ -215,16 +226,19 @@ type TokenRepo struct {
 	cache *badger.DB
 }
 
-type BlacklistType uint
+func NewTokenRepo(cache *badger.DB) *TokenRepo {
+	return &TokenRepo{cache}
+}
+
+type CacheType uint
 
 const (
-	BlacklistIPAddress BlacklistType = iota
-	BlacklistRefreshToken
+	BlacklistIPAddress CacheType = iota
+	ListRefreshToken
 )
 
-func (r *TokenRepo) Blacklist(
-	ctx context.Context,
-	typ BlacklistType,
+func (r *TokenRepo) List(
+	typ CacheType,
 	val string,
 	exp time.Duration,
 ) error {
@@ -236,7 +250,7 @@ func (r *TokenRepo) Blacklist(
 // if token is cached -> valid
 // token must be removed upon first use
 // otherwise will lead to token reuse
-func (r *TokenRepo) IsValid(typ BlacklistType, val string) (bool, error) {
+func (r *TokenRepo) IsValid(typ CacheType, val string) (bool, error) {
 	err := r.cache.View(func(txn *badger.Txn) error {
 		_, err := txn.Get([]byte(getPrefix(typ) + val))
 		return err
@@ -253,12 +267,12 @@ func (r *TokenRepo) IsValid(typ BlacklistType, val string) (bool, error) {
 	return true, nil
 }
 
-func getPrefix(typ BlacklistType) string {
+func getPrefix(typ CacheType) string {
 	var prefix string
 	switch typ {
 	case BlacklistIPAddress:
 		prefix = "ip:"
-	case BlacklistRefreshToken:
+	case ListRefreshToken:
 		prefix = "rt:"
 	}
 

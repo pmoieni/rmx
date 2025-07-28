@@ -172,21 +172,20 @@ func handleRefresh(tokenRepo TokenRepo) http.HandlerFunc {
 			return
 		}
 
-		isBlacklisted, err := tokenRepo.IsBlacklisted(
-			r.Context(),
-			userStore.BlacklistRefreshToken,
+		isValid, err := tokenRepo.IsValid(
+			userStore.ListRefreshToken,
 			rt.Value,
 		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
-		if isBlacklisted {
+		if !isValid {
 			http.Error(w, "refresh token reuse detected", http.StatusForbidden)
 			return
 		}
 
-		if err := tokenRepo.Blacklist(r.Context(), userStore.BlacklistRefreshToken, rt.Value, refreshTokenExpiry); err != nil {
+		if err := tokenRepo.List(userStore.ListRefreshToken, rt.Value, refreshTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}

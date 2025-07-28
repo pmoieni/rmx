@@ -43,6 +43,6 @@ type ConnectionRepo interface {
 }
 
 type TokenRepo interface {
-	Blacklist(context.Context, userStore.BlacklistType, string, time.Duration) error
-	IsBlacklisted(context.Context, userStore.BlacklistType, string) (bool, error)
+	List(userStore.CacheType, string, time.Duration) error
+	IsValid(userStore.CacheType, string) (bool, error)
 }
