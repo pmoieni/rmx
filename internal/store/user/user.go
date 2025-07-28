@@ -204,7 +204,11 @@ func (r *ConnectionRepo) CreateConnection(
 	return newConnection, nil
 }
 
-func (r *ConnectionRepo) UpdateConnection(ctx context.Context, id string, c *ConnectionParams) error {
+func (r *ConnectionRepo) UpdateConnection(
+	ctx context.Context,
+	id string,
+	c *ConnectionParams,
+) error {
 	query := `UPDATE connections
         SET (id = $2, user_id = $3, provider = $4)
         WHERE id=$1`

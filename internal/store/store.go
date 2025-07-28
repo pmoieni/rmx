@@ -24,7 +24,12 @@ type StoreErr struct {
 }
 
 func (e *StoreErr) Error() string {
-	return fmt.Sprintf("[Store Error]\nError Code: %d\nError Message: %s\nError: %s\n", e.Code, e.Message, e.Err)
+	return fmt.Sprintf(
+		"[Store Error]\nError Code: %d\nError Message: %s\nError: %s\n",
+		e.Code,
+		e.Message,
+		e.Err,
+	)
 }
 
 //go:embed migrations/*.sql
