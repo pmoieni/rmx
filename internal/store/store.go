@@ -1,14 +1,18 @@
 package store
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/pgx"
+	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	"github.com/golang-migrate/migrate/v4/source/iofs"
-	_ "github.com/jackc/pgx"
+	_ "github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -36,7 +40,7 @@ func (e *StoreErr) Error() string {
 var fs embed.FS
 
 func NewDB(dsn string) (*sqlx.DB, error) {
-	db, err := sqlx.Open("pgx", dsn)
+	db, err := getDB(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +50,7 @@ func NewDB(dsn string) (*sqlx.DB, error) {
 		return nil, err
 	}
 
-	m, err := migrate.NewWithSourceInstance("iofs", source, dsn)
+	m, err := migrate.NewWithSourceInstance("iofs", source, "pgx5"+strings.TrimPrefix(dsn, "postgres"))
 	if err != nil {
 		return nil, err
 	}
@@ -56,4 +60,14 @@ func NewDB(dsn string) (*sqlx.DB, error) {
 	}
 
 	return db, nil
+}
+
+func getDB(ctx context.Context, dsn string) (*sqlx.DB, error) {
+	pool, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	pgxdb := stdlib.OpenDBFromPool(pool)
+	return sqlx.NewDb(pgxdb, "pgx"), nil
 }
