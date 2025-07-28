@@ -50,13 +50,16 @@
   languages.go.enable = true;
 
   # pre-commit hooks
-  git-hooks.hooks = {
-    shellcheck.enable = true;
-    gofmt.enable = true;
-    golines.enable = true;
-    revive.enable = true;
-    govet.enable = true;
-    gotest.enable = true;
+  git-hooks = {
+    excludes = ["^vendor/"];
+    hooks = {
+      shellcheck.enable = true;
+      gofmt.enable = true;
+      golines.enable = true;
+      revive.enable = true;
+      govet.enable = true;
+      gotest.enable = true;
+    };
   };
 
   # processes

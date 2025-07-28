@@ -8,27 +8,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dgraph-io/badger/v4"
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-
-	"github.com/redis/rueidis"
 )
 
 var (
 	maxUsernameLength = 15
 	minUsernameLength = 1
 
-	invalidUsernameError = errors.New("invalid value for Userame in UserParams")
-	invalidEmailError    = errors.New("invalid value for Email in UserParams")
+	errInvalidUsernameError = errors.New("invalid value for Userame in UserParams")
+	errInvalidEmailError    = errors.New("invalid value for Email in UserParams")
 )
 
 type UserRepo struct {
-	db    *sqlx.DB
-	redis rueidis.Client
+	db *sqlx.DB
 }
 
-func NewUserRepo(db *sqlx.DB, redis rueidis.Client) *UserRepo {
-	return &UserRepo{db, redis}
+func NewUserRepo(db *sqlx.DB) *UserRepo {
+	return &UserRepo{db}
 }
 
 type UserDTO struct {
@@ -49,11 +47,11 @@ func (p *UserParams) Validate() error {
 	p.trim()
 
 	if len(p.Username) < minUsernameLength || len(p.Username) > maxUsernameLength {
-		return invalidUsernameError
+		return errInvalidUsernameError
 	}
 
 	if _, err := mail.ParseAddress(p.Email); err != nil {
-		return invalidEmailError
+		return errInvalidEmailError
 	}
 
 	return nil
@@ -152,7 +150,10 @@ func (r *UserRepo) DeleteUser(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-func (r *UserRepo) GetConnectionByConnectionID(ctx context.Context, id string) (*ConnectionDTO, error) {
+func (r *UserRepo) GetConnectionByConnectionID(
+	ctx context.Context,
+	id string,
+) (*ConnectionDTO, error) {
 	var c ConnectionDTO
 	query := `SELECT id, user_id, provider, created_at, updated_at, deleted_at
         FROM connections
@@ -169,11 +170,17 @@ func (r *UserRepo) GetConnectionByConnectionID(ctx context.Context, id string) (
 	return &c, nil
 }
 
-func (r *UserRepo) GetConnectionsByUserID(ctx context.Context, id uuid.UUID) ([]ConnectionDTO, error) {
+func (r *UserRepo) GetConnectionsByUserID(
+	ctx context.Context,
+	id uuid.UUID,
+) ([]ConnectionDTO, error) {
 	return []ConnectionDTO{}, nil
 }
 
-func (r *UserRepo) CreateConnection(ctx context.Context, c *ConnectionParams) (*ConnectionDTO, error) {
+func (r *UserRepo) CreateConnection(
+	ctx context.Context,
+	c *ConnectionParams,
+) (*ConnectionDTO, error) {
 	var newConnection *ConnectionDTO
 	query := `INSERT INTO connections
         (id, user_id, provider)
@@ -204,6 +211,10 @@ func (r *UserRepo) DeleteConnection(ctx context.Context, id string) error {
 	return err
 }
 
+type TokenRepo struct {
+	cache *badger.DB
+}
+
 type BlacklistType uint
 
 const (
@@ -211,21 +222,35 @@ const (
 	BlacklistRefreshToken
 )
 
-func (r *UserRepo) Blacklist(ctx context.Context, typ BlacklistType, val string, exp time.Duration) error {
-	return r.redis.Do(ctx, r.redis.B().Setex().Key(getPrefix(typ)+val).Seconds(int64(exp.Seconds())).Value("").Build()).Error()
+func (r *TokenRepo) Blacklist(
+	ctx context.Context,
+	typ BlacklistType,
+	val string,
+	exp time.Duration,
+) error {
+	return r.cache.Update(func(txn *badger.Txn) error {
+		return txn.Set([]byte(getPrefix(typ)+val), []byte(""))
+	})
 }
 
-func (r *UserRepo) IsBlacklisted(ctx context.Context, typ BlacklistType, val string) (bool, error) {
-	if err := r.redis.Do(ctx, r.redis.B().Get().Key(getPrefix(typ)+val).Build()).Error(); err != nil {
-		if errors.Is(err, rueidis.ErrNoSlot) {
-			return true, nil
+// if token is cached -> valid
+// token must be removed upon first use
+// otherwise will lead to token reuse
+func (r *TokenRepo) IsValid(typ BlacklistType, val string) (bool, error) {
+	err := r.cache.View(func(txn *badger.Txn) error {
+		_, err := txn.Get([]byte(getPrefix(typ) + val))
+		return err
+	})
+
+	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return false, err
 		}
 
-		// TODO: should this be false or true?
 		return false, err
 	}
 
-	return false, nil
+	return true, nil
 }
 
 func getPrefix(typ BlacklistType) string {

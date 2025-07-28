@@ -5,6 +5,7 @@ import (
 
 	"github.com/pmoieni/rmx/internal/config"
 	"github.com/pmoieni/rmx/internal/net"
+	"github.com/pmoieni/rmx/internal/oauth"
 	"github.com/pmoieni/rmx/internal/services/jam"
 	"github.com/pmoieni/rmx/internal/services/user"
 	"github.com/pmoieni/rmx/internal/store"
@@ -24,12 +25,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	jamService, err := jam.NewService(jamStore.NewJamRepo(dbHandle))
+	jamRepo := jamStore.NewJamRepo(dbHandle)
+
+	jamService, err := jam.NewService(jamRepo)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	userService, err := user.NewService(userStore.NewUserRepo(dbHandle))
+	userRepo := userStore.NewUserRepo(dbHandle)
+	connectionRepo := ""
+	tokenRepo := ""
+	clientStore := oauth.NewClientStore()
+
+	userService, err := user.NewService(userRepo, connectionRepo, tokenRepo, clientStore)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +45,7 @@ func main() {
 	srv := net.NewServer(&net.ServerFlags{
 		Host: cfg.ServerHost,
 		Port: cfg.ServerPort,
-	}, jamService)
+	}, jamService, userService)
 
 	srv.Run("", "")
 }

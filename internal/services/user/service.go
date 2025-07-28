@@ -33,16 +33,25 @@ func init() {
 type UserService struct {
 	*http.ServeMux
 
-	repo UserRepo
-	ocs  *oauth.ClientStore
-	log  *lib.Logger
+	userRepo       UserRepo
+	connectionRepo ConnectionRepo
+	tokenRepo      TokenRepo
+	ocs            *oauth.ClientStore
+	log            *lib.Logger
 }
 
-func NewService(repo UserRepo, ocs *oauth.ClientStore) (*UserService, error) {
+func NewService(
+	userRepo UserRepo,
+	connectionRepo ConnectionRepo,
+	tokenRepo TokenRepo,
+	ocs *oauth.ClientStore,
+) (*UserService, error) {
 	s := &UserService{
-		repo: repo,
-		ocs:  ocs,
-		log:  lib.NewLogger("user"),
+		userRepo:       userRepo,
+		connectionRepo: connectionRepo,
+		tokenRepo:      tokenRepo,
+		ocs:            ocs,
+		log:            lib.NewLogger("user"),
 	}
 	s.setupControllers()
 
@@ -56,8 +65,8 @@ func (s *UserService) MountPath() string {
 func (s *UserService) setupControllers() {
 	s.Handle("POST /me", handleUserInfo())
 	s.Handle("GET /auth/login", handleLogin(s.ocs))
-	s.Handle("GET /auth/callback", handleCallback(s.repo, s.ocs))
-	s.Handle("GET /auth/refresh", handleRefresh(s.repo))
+	s.Handle("GET /auth/callback", handleCallback(s.userRepo, s.connectionRepo, s.ocs))
+	s.Handle("GET /auth/refresh", handleRefresh(s.tokenRepo))
 }
 
 func handleUserInfo() http.HandlerFunc {
@@ -77,7 +86,11 @@ func handleLogin(ocs *oauth.ClientStore) http.HandlerFunc {
 	}
 }
 
-func handleCallback(repo UserRepo, ocs *oauth.ClientStore) http.HandlerFunc {
+func handleCallback(
+	userRepo UserRepo,
+	connectionRepo ConnectionRepo,
+	ocs *oauth.ClientStore,
+) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		pName := getProvider(r)
 		provider, err := ocs.GetProvider(pName)
@@ -99,7 +112,7 @@ func handleCallback(repo UserRepo, ocs *oauth.ClientStore) http.HandlerFunc {
 
 		// create new user, continue if exists
 		// TODO: this should return the created user
-		user, err := repo.CreateUser(r.Context(), &userStore.UserParams{
+		user, err := userRepo.CreateUser(r.Context(), &userStore.UserParams{
 			Username: codename.Generate(codenameRNG, 4),
 			Email:    res.Email,
 		})
@@ -117,7 +130,7 @@ func handleCallback(repo UserRepo, ocs *oauth.ClientStore) http.HandlerFunc {
 			}
 		}
 
-		if _, err := repo.CreateConnection(r.Context(), &userStore.ConnectionParams{
+		if _, err := connectionRepo.CreateConnection(r.Context(), &userStore.ConnectionParams{
 			ID:       res.Issuer + ":" + res.UserID,
 			UserID:   user.ID,
 			Provider: pName,
@@ -147,7 +160,7 @@ func handleCallback(repo UserRepo, ocs *oauth.ClientStore) http.HandlerFunc {
 	}
 }
 
-func handleRefresh(repo UserRepo) http.HandlerFunc {
+func handleRefresh(tokenRepo TokenRepo) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rt, err := r.Cookie("rmx_rt")
 		if err != nil {
@@ -159,7 +172,11 @@ func handleRefresh(repo UserRepo) http.HandlerFunc {
 			return
 		}
 
-		isBlacklisted, err := repo.IsBlacklisted(r.Context(), userStore.BlacklistRefreshToken, rt.Value)
+		isBlacklisted, err := tokenRepo.IsBlacklisted(
+			r.Context(),
+			userStore.BlacklistRefreshToken,
+			rt.Value,
+		)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
@@ -169,7 +186,7 @@ func handleRefresh(repo UserRepo) http.HandlerFunc {
 			return
 		}
 
-		if err := repo.Blacklist(r.Context(), userStore.BlacklistRefreshToken, rt.Value, refreshTokenExpiry); err != nil {
+		if err := tokenRepo.Blacklist(r.Context(), userStore.BlacklistRefreshToken, rt.Value, refreshTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
@@ -203,7 +220,12 @@ func handleRefresh(repo UserRepo) http.HandlerFunc {
 	}
 }
 
-func setToken(w http.ResponseWriter, r *http.Request, name, userID, email string, expiry time.Duration) error {
+func setToken(
+	w http.ResponseWriter,
+	r *http.Request,
+	name, userID, email string,
+	expiry time.Duration,
+) error {
 	token, err := token.New(userID, email, expiry)
 	if err != nil {
 		return err
