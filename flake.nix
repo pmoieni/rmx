@@ -65,6 +65,7 @@
       packages.default = callPackage ./. {
         inherit (gomod2nix.legacyPackages.${system}) buildGoApplication;
       };
+      formatter = pkgs.treefmt;
       devShells.default = callPackage ./shell.nix {
         inherit (gomod2nix.legacyPackages.${system}) mkGoEnv gomod2nix;
         inherit pre-commit-hooks;

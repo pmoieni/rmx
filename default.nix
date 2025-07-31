@@ -13,9 +13,12 @@
   buildGoApplication ? pkgs.buildGoApplication,
 }:
 buildGoApplication {
-  pname = "server";
+  pname = "rmx-server";
   version = "0.1";
   pwd = ./.;
   src = ./.;
   modules = ./gomod2nix.toml;
+  fixupPhase = ''
+    mv $out/bin/server $out/bin/rmx-server
+  '';
 }

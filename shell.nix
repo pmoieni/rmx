@@ -70,5 +70,13 @@ in
       pkgs.delve
     ];
 
-    inherit (pre-commit-check) shellHook;
+    nativeBuildInputs = with pkgs; [
+      nixfmt-rfc-style
+      taplo
+    ];
+
+    shellHook = ''
+      ${pre-commit-check.shellHook}
+      gomod2nix import
+    '';
   }
