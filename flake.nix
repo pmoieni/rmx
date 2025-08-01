@@ -1,5 +1,5 @@
 {
-  description = "A basic gomod2nix flake";
+  description = "RMX flake";
 
   inputs = {
     nixpkgs.url = "https://flakehub.com/f/NixOS/nixpkgs/0"; # using stable branch, switch to 0.1 for unstable
