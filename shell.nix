@@ -73,6 +73,7 @@ in
     nativeBuildInputs = with pkgs; [
       nixfmt-rfc-style
       taplo
+      goEnv
     ];
 
     shellHook = ''
