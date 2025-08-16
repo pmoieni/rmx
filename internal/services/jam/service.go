@@ -15,6 +15,8 @@ type JamService struct {
 
 func NewService(repo JamRepo) (*JamService, error) {
 	js := &JamService{
+		ServeMux: http.NewServeMux(),
+
 		repo: repo,
 		log:  lib.NewLogger("jam"),
 	}
@@ -28,9 +30,9 @@ func (js *JamService) MountPath() string {
 }
 
 func (js *JamService) setupControllers() {
-	js.Handle("POST /", handleCreateJam())
-	js.Handle("GET /", handleGetOrListJams())
-	js.Handle("GET /ws", handleConn())
+	js.HandleFunc("POST /", handleCreateJam())
+	js.HandleFunc("GET /", handleGetOrListJams())
+	js.HandleFunc("GET /ws", handleConn())
 }
 
 func handleCreateJam() http.HandlerFunc {

@@ -2,14 +2,9 @@ package store
 
 import (
 	"context"
-	"embed"
 	"errors"
 	"fmt"
-	"strings"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
-	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/stdlib"
@@ -36,34 +31,9 @@ func (e *StoreErr) Error() string {
 	)
 }
 
-//go:embed migrations/*.sql
-var fs embed.FS
-
 func NewDB(dsn string) (*sqlx.DB, error) {
-	db, err := getDB(context.Background(), dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	source, err := iofs.New(fs, "migrations")
-	if err != nil {
-		return nil, err
-	}
-
-	m, err := migrate.NewWithSourceInstance("iofs", source, "pgx5"+strings.TrimPrefix(dsn, "postgres"))
-	if err != nil {
-		return nil, err
-	}
-
-	if err := m.Up(); err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
-func getDB(ctx context.Context, dsn string) (*sqlx.DB, error) {
-	pool, err := pgxpool.New(ctx, dsn)
+	// TODO: pass context
+	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		return nil, err
 	}

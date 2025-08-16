@@ -53,5 +53,7 @@ func main() {
 		Port: cfg.ServerPort,
 	}, jamService, userService)
 
-	srv.Run("", "")
+	if err := srv.Run("", ""); err != nil {
+		log.Fatalf("Could not start the server: %v", err)
+	}
 }

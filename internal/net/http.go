@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type Service interface {
@@ -35,20 +38,44 @@ func NewServer(flags *ServerFlags, services ...Service) *Server {
 			Handler:      mux,
 			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,
+			ErrorLog:     slog.NewLogLogger(slog.Default().Handler(), slog.LevelError),
 		},
 	}
 }
 
-func (s *Server) Run(certPath, keyPath string) {
-	if certPath != "" || keyPath != "" {
-		go s.runTLS(certPath, keyPath)
-	} else {
-		go s.run()
-	}
+func (s *Server) Run(certPath, keyPath string) error {
+	sCtx, cancel := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	defer cancel()
+
+	eg, egCtx := errgroup.WithContext(sCtx)
+
+	eg.Go(func() error {
+		slog.Info(fmt.Sprintf("App server starting on %s", s.http.Addr))
+
+		if certPath != "" || keyPath != "" {
+			return s.http.ListenAndServeTLS(certPath, keyPath)
+		} else {
+			return s.http.ListenAndServe()
+		}
+	})
+
+	eg.Go(func() error {
+		<-egCtx.Done()
+		// if context.Background is "Done" or the timeout is exceeded, it'll cause an immediate shutdown
+		return s.Shutdown(context.Background(), 20*time.Second) // no idea how much timeout is needed
+	})
+
+	return eg.Wait()
 }
 
-func (s *Server) Shutdown(timeout time.Duration) error {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+func (s *Server) Shutdown(ctx context.Context, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	err := s.http.Shutdown(ctx)
@@ -60,23 +87,13 @@ func (s *Server) Shutdown(timeout time.Duration) error {
 	return nil
 }
 
-func homeHandler() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-
-	}
+func homeHandler(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("RMX"))
 }
 
 func setupControllers(mux *http.ServeMux, services ...Service) {
-	mux.Handle("/", homeHandler())
+	mux.HandleFunc("/", homeHandler)
 	for _, service := range services {
-		mux.Handle("/"+service.MountPath(), service)
+		mux.Handle("/"+service.MountPath()+"/", service)
 	}
-}
-
-func (s *Server) runTLS(certPath, keyPath string) {
-	log.Fatal(s.http.ListenAndServeTLS(certPath, keyPath))
-}
-
-func (s *Server) run() {
-	log.Fatal(s.http.ListenAndServe())
 }

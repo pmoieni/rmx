@@ -2,8 +2,11 @@ package user
 
 import (
 	"errors"
+	"fmt"
+	"hash/fnv"
 	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -47,6 +50,8 @@ func NewService(
 	ocs *oauth.ClientStore,
 ) (*UserService, error) {
 	s := &UserService{
+		ServeMux: http.NewServeMux(),
+
 		userRepo:       userRepo,
 		connectionRepo: connectionRepo,
 		tokenRepo:      tokenRepo,
@@ -63,14 +68,16 @@ func (s *UserService) MountPath() string {
 }
 
 func (s *UserService) setupControllers() {
-	s.Handle("POST /me", handleUserInfo())
-	s.Handle("GET /auth/login", handleLogin(s.ocs))
-	s.Handle("GET /auth/callback", handleCallback(s.userRepo, s.connectionRepo, s.ocs))
-	s.Handle("GET /auth/refresh", handleRefresh(s.tokenRepo))
+	s.HandleFunc("GET /me", handleUserInfo())
+	s.HandleFunc("GET /auth/login", handleLogin(s.ocs))
+	s.HandleFunc("GET /auth/callback", handleCallback(s.userRepo, s.tokenRepo, s.connectionRepo, s.ocs))
+	s.HandleFunc("GET /auth/refresh", handleRefresh(s.tokenRepo))
 }
 
 func handleUserInfo() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {}
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("hit")
+	}
 }
 
 func handleLogin(ocs *oauth.ClientStore) http.HandlerFunc {
@@ -88,6 +95,7 @@ func handleLogin(ocs *oauth.ClientStore) http.HandlerFunc {
 
 func handleCallback(
 	userRepo UserRepo,
+	tokenRepo TokenRepo,
 	connectionRepo ConnectionRepo,
 	ocs *oauth.ClientStore,
 ) http.HandlerFunc {
@@ -147,12 +155,12 @@ func handleCallback(
 			}
 		}
 
-		if err := setToken(w, r, "rmx_at", user.ID.String(), res.Email, accessTokenExpiry); err != nil {
+		if err := setToken(w, r, nil, "rmx_at", user.ID.String(), res.Email, accessTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
 
-		if err := setToken(w, r, "rmx_rt", user.ID.String(), res.Email, refreshTokenExpiry); err != nil {
+		if err := setToken(w, r, tokenRepo, "rmx_rt", user.ID.String(), res.Email, refreshTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
@@ -207,12 +215,12 @@ func handleRefresh(tokenRepo TokenRepo) http.HandlerFunc {
 		}
 		emailStr := email.(string)
 
-		if err := setToken(w, r, "rmx_at", userID, emailStr, accessTokenExpiry); err != nil {
+		if err := setToken(w, r, nil, "rmx_at", userID, emailStr, accessTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
 
-		if err := setToken(w, r, "rmx_rt", userID, emailStr, refreshTokenExpiry); err != nil {
+		if err := setToken(w, r, tokenRepo, "rmx_rt", userID, emailStr, refreshTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
 			return
 		}
@@ -222,12 +230,25 @@ func handleRefresh(tokenRepo TokenRepo) http.HandlerFunc {
 func setToken(
 	w http.ResponseWriter,
 	r *http.Request,
+	tokenRepo TokenRepo,
 	name, userID, email string,
 	expiry time.Duration,
 ) error {
 	token, err := token.New(userID, email, expiry)
 	if err != nil {
 		return err
+	}
+
+	// store the hash of the token
+	if tokenRepo != nil {
+		h := fnv.New32a()
+		if _, err := h.Write([]byte(token)); err != nil {
+			return err
+		}
+
+		if err = tokenRepo.List(userStore.ListRefreshToken, strconv.FormatUint(uint64(h.Sum32()), 10), expiry); err != nil {
+			return err
+		}
 	}
 
 	http.SetCookie(w, &http.Cookie{
