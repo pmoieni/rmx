@@ -8,7 +8,7 @@ import (
 )
 
 type Provider interface {
-	HandleAuthorizationRequest(http.ResponseWriter, *http.Request) http.HandlerFunc
+	HandleAuthorizationRequest(http.ResponseWriter, *http.Request)
 	GetCallbackResult(*http.Request) (*CallbackResult, error)
 	VerifyAccessToken(context.Context, string) error
 }

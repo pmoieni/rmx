@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"log"
 
 	"github.com/dgraph-io/badger/v4"
 	"github.com/pmoieni/rmx/internal/config"
 	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/oauth"
+	"github.com/pmoieni/rmx/internal/oauth/google"
 	"github.com/pmoieni/rmx/internal/services/jam"
 	"github.com/pmoieni/rmx/internal/services/user"
 	"github.com/pmoieni/rmx/internal/store"
@@ -42,6 +44,9 @@ func main() {
 	connectionRepo := userStore.NewConnectionRepo(dbHandle)
 	tokenRepo := userStore.NewTokenRepo(cache)
 	clientStore := oauth.NewClientStore()
+
+	clientStore.AddProvider("google",
+		google.NewOIDC(context.Background(), cfg.OAuth.Google.ClientID, cfg.OAuth.Google.ClientSecret, cfg.OAuth.RedirectURL))
 
 	userService, err := user.NewService(userRepo, connectionRepo, tokenRepo, clientStore)
 	if err != nil {

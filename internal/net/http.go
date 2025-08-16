@@ -94,6 +94,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 func setupControllers(mux *http.ServeMux, services ...Service) {
 	mux.HandleFunc("/", homeHandler)
 	for _, service := range services {
-		mux.Handle("/"+service.MountPath()+"/", service)
+		path := "/" + service.MountPath()
+		mux.Handle(path+"/", http.StripPrefix(path, service))
 	}
 }

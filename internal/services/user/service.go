@@ -2,7 +2,6 @@ package user
 
 import (
 	"errors"
-	"fmt"
 	"hash/fnv"
 	"math/rand"
 	"net/http"
@@ -76,7 +75,6 @@ func (s *UserService) setupControllers() {
 
 func handleUserInfo() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("hit")
 	}
 }
 
