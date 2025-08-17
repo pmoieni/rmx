@@ -43,10 +43,11 @@ func main() {
 	userRepo := userStore.NewUserRepo(dbHandle)
 	connectionRepo := userStore.NewConnectionRepo(dbHandle)
 	tokenRepo := userStore.NewTokenRepo(cache)
+
 	clientStore := oauth.NewClientStore()
 
 	clientStore.AddProvider("google",
-		google.NewOIDC(context.Background(), cfg.OAuth.Google.ClientID, cfg.OAuth.Google.ClientSecret, cfg.OAuth.RedirectURL))
+		google.NewOIDC(context.Background(), cfg.OAuth.Google.ClientID, cfg.OAuth.Google.ClientSecret, cfg.OAuth.Google.RedirectURL))
 
 	userService, err := user.NewService(userRepo, connectionRepo, tokenRepo, clientStore)
 	if err != nil {

@@ -16,8 +16,8 @@ type Config struct {
 		Google struct {
 			ClientID     string `json:"clientID"`
 			ClientSecret string `json:"clientSecret"`
+			RedirectURL  string `json:"redirectURL"`
 		} `json:"google"`
-		RedirectURL string `json:"redirectURL"`
 	} `json:"oauth"`
 }
 

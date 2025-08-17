@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -130,8 +131,10 @@ func (p *Provider) getIDToken(r *http.Request, token *oauth2.Token) (*oidc.IDTok
 		return nil, errors.New("no id_token field in oauth2 token")
 	}
 
+	fmt.Println(rawIDToken)
 	idToken, err := p.verifier.Verify(r.Context(), rawIDToken)
 	if err != nil {
+		fmt.Println(err)
 		return nil, errors.New("failed to verify ID Token")
 	}
 
