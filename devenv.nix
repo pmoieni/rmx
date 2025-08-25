@@ -18,7 +18,7 @@
   };
 
   # languages
-    languages.nix.enable = true;
+  languages.nix.enable = true;
   languages.go.enable = true;
 
   # processes

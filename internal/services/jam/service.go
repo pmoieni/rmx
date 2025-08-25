@@ -4,7 +4,10 @@ import (
 	"net/http"
 
 	"github.com/pmoieni/rmx/internal/lib"
+	"github.com/pmoieni/rmx/internal/net"
 )
+
+var _ net.Service = (*JamService)(nil)
 
 type JamService struct {
 	*http.ServeMux

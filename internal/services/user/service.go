@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lucasepe/codename"
 	"github.com/pmoieni/rmx/internal/lib"
+	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/oauth"
 	"github.com/pmoieni/rmx/internal/services/user/internal/token"
 	"github.com/pmoieni/rmx/internal/store"
@@ -31,6 +32,8 @@ func init() {
 
 	codenameRNG = rng
 }
+
+var _ net.Service = (*UserService)(nil)
 
 type UserService struct {
 	*http.ServeMux
