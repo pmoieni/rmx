@@ -33,6 +33,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// Jam Service
 	jamRepo := jamStore.NewJamRepo(dbHandle)
 
 	jamService, err := jam.NewService(jamRepo)
@@ -40,6 +41,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	// User Service
 	userRepo := userStore.NewUserRepo(dbHandle)
 	connectionRepo := userStore.NewConnectionRepo(dbHandle)
 	tokenRepo := userStore.NewTokenRepo(cache)
