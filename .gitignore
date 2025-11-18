@@ -21,31 +21,15 @@
 go.work
 go.work.sum
 
-# Devenv
-.devenv*
-devenv.local.nix
-
-# direnv
-.direnv
-
 # pre-commit
 .pre-commit-config.yaml
 
 # config
 rmx.config.json
 
-# gomod2nix
-/gomod2nix-template
-
 # nix build result
-/result
+result/
 
-# Devenv
-.devenv*
-devenv.local.nix
-
-# direnv
+# flake
 .direnv
-
-# pre-commit
-.pre-commit-config.yaml
+data/
