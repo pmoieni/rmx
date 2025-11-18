@@ -17,7 +17,7 @@ var (
 	maxUsernameLength = 15
 	minUsernameLength = 1
 
-	errInvalidUsernameError = errors.New("invalid value for Userame in UserParams")
+	errInvalidUsernameError = errors.New("invalid value for Username in UserParams")
 	errInvalidEmailError    = errors.New("invalid value for Email in UserParams")
 )
 
