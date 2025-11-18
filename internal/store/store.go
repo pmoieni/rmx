@@ -31,9 +31,9 @@ func (e *StoreErr) Error() string {
 	)
 }
 
-func NewDB(dsn string) (*sqlx.DB, error) {
+func NewDB(ctx context.Context, dsn string) (*sqlx.DB, error) {
 	// TODO: pass context
-	pool, err := pgxpool.New(context.Background(), dsn)
+	pool, err := pgxpool.New(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}

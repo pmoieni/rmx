@@ -23,7 +23,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	dbHandle, err := store.NewDB(cfg.DSN)
+	dbHandle, err := store.NewDB(context.Background(), cfg.DSN)
 	if err != nil {
 		log.Fatal(err)
 	}
