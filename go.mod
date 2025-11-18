@@ -4,6 +4,7 @@ go 1.24.5
 
 require (
 	aidanwoods.dev/go-paseto v1.5.2
+	github.com/coder/websocket v1.8.14
 	github.com/coreos/go-oidc/v3 v3.11.0
 	github.com/dgraph-io/badger/v4 v4.8.0
 	github.com/gobwas/ws v1.4.0
