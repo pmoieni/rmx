@@ -28,6 +28,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if _, err := dbHandle.Exec("SELECT 1"); err != nil {
+		log.Fatal(err)
+	}
+
 	cache, err := badger.Open(badger.DefaultOptions("/tmp/badger/rmx"))
 	if err != nil {
 		log.Fatal(err)
@@ -59,7 +63,7 @@ func main() {
 	srv := net.NewServer(&net.ServerFlags{
 		Host: cfg.ServerHost,
 		Port: cfg.ServerPort,
-	}, jamService, userService)
+	}, userService, jamService)
 
 	if err := srv.Run("", ""); err != nil {
 		log.Fatalf("Could not start the server: %v", err)

@@ -12,6 +12,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.5
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/lucasepe/codename v0.2.0
+	github.com/rs/cors v1.11.1
 	golang.org/x/oauth2 v0.22.0
 	golang.org/x/sync v0.15.0
 )

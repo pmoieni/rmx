@@ -16,7 +16,7 @@
       ];
       perSystem =
         {
-          self',
+          self,
           pkgs,
           config,
           lib,
@@ -38,11 +38,9 @@
 
               services.postgres."pg1" = {
                 enable = true;
-                initialDatabases = [
-                  {
-                    name = dbName;
-                  }
-                ];
+                initialScript.before = ''
+                  CREATE USER rmx WITH password 'rmx'; 
+                '';
                 listen_addresses = "127.0.0.1";
                 port = 5432;
                 settings = {
@@ -63,6 +61,7 @@
                   command = pkgs.pgweb;
                   depends_on."pg1".condition = "process_healthy";
                 };
+
               settings.processes.test = {
                 command = pkgs.writeShellApplication {
                   name = "pg1-test";
@@ -81,7 +80,12 @@
             inputsFrom = [
               config.process-compose."default".services.outputs.devShell
             ];
-            nativeBuildInputs = [ pkgs.go ];
+            nativeBuildInputs = [
+              pkgs.go
+              pkgs.gotools
+              pkgs.gopls
+              pkgs.nil
+            ];
           };
         };
     };

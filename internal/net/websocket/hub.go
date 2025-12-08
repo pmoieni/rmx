@@ -42,7 +42,7 @@ func (h *Hub) listen() {
 }
 
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	c, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+	c, err := websocket.Accept(w, r, nil /*&websocket.AcceptOptions{InsecureSkipVerify: true}*/)
 	if err != nil {
 		// TODO log that there was an error
 		http.Error(w, err.Error(), http.StatusBadRequest)

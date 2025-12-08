@@ -1,6 +1,8 @@
 package jam
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 
 	"github.com/pmoieni/rmx/internal/lib"
@@ -31,7 +33,7 @@ func NewService(repo JamRepo) (*JamService, error) {
 }
 
 func (js *JamService) MountPath() string {
-	return "jams"
+	return "jam"
 }
 
 func (js *JamService) setupControllers() {
@@ -41,8 +43,21 @@ func (js *JamService) setupControllers() {
 }
 
 func handleCreateJam() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	type req struct {
+		Name string `json:"name"`
+		BPM  uint   `json:"bpm"`
+	}
 
+	return func(w http.ResponseWriter, r *http.Request) {
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		var req *req
+		if err := dec.Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("name: %s\n", req.Name)
 	}
 }
 
