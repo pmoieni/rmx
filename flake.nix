@@ -83,6 +83,7 @@
             nativeBuildInputs = [
               pkgs.go
               pkgs.gotools
+              pkgs.golangci-lint
               pkgs.gopls
               pkgs.nil
             ];
