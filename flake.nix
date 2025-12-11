@@ -85,6 +85,7 @@
               pkgs.gotools
               pkgs.golangci-lint
               pkgs.gopls
+              pkgs.sqls
               pkgs.nil
             ];
           };
