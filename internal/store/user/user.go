@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	maxUsernameLength = 20
+	maxUsernameLength = 30
 	minUsernameLength = 1
 
 	errInvalidUsernameError = errors.New("invalid value for Username in UserParams")
@@ -30,12 +30,12 @@ func NewUserRepo(db *sqlx.DB) *UserRepo {
 }
 
 type UserDTO struct {
-	ID        uuid.UUID `db:"id"`
-	Username  string    `db:"username"`
-	Email     string    `db:"email"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-	DeletedAt time.Time `db:"deleted_at"`
+	ID        uuid.UUID    `db:"id"`
+	Username  string       `db:"username"`
+	Email     string       `db:"email"`
+	CreatedAt time.Time    `db:"created_at"`
+	UpdatedAt time.Time    `db:"updated_at"`
+	DeletedAt sql.NullTime `db:"deleted_at"`
 }
 
 type UserParams struct {
@@ -101,12 +101,12 @@ func (r *UserRepo) CreateUser(ctx context.Context, u *UserParams) (*UserDTO, err
 		return nil, err
 	}
 
-	var newUser *UserDTO
+	newUser := &UserDTO{}
 	query := `INSERT INTO users
         (username, email)
-        VALUES ($1, $2, $3)
+        VALUES ($1, $2)
         RETURNING *`
-	if err := r.db.QueryRowxContext(ctx, query, u.Username, u.Email).Scan(&newUser); err != nil {
+	if err := r.db.QueryRowxContext(ctx, query, u.Username, u.Email).StructScan(newUser); err != nil {
 		return nil, err
 	}
 
@@ -118,11 +118,11 @@ func (r *UserRepo) UpdateUser(ctx context.Context, id uuid.UUID, u *UserParams) 
 		return nil, err
 	}
 
-	var updatedUser *UserDTO
+	updatedUser := &UserDTO{}
 	query := `UPDATE users
         SET (username = $2, email = $3)
         WHERE id=$1`
-	if err := r.db.QueryRowContext(ctx, query, id.String(), u.Username, u.Email).Scan(&updatedUser); err != nil {
+	if err := r.db.QueryRowxContext(ctx, query, id.String(), u.Username, u.Email).StructScan(updatedUser); err != nil {
 		return nil, err
 	}
 
@@ -139,12 +139,12 @@ func (r *UserRepo) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 type ConnectionDTO struct {
-	ID        string    `db:"id"`
-	UserID    uuid.UUID `db:"user_id"`
-	Provider  string    `db:"provider"`
-	CreatedAt time.Time `db:"created_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-	DeletedAt time.Time `db:"deleted_at"`
+	ID        string       `db:"id"`
+	UserID    uuid.UUID    `db:"user_id"`
+	Provider  string       `db:"provider"`
+	CreatedAt time.Time    `db:"created_at"`
+	UpdatedAt time.Time    `db:"updated_at"`
+	DeletedAt sql.NullTime `db:"deleted_at"`
 }
 
 type ConnectionParams struct {
@@ -188,16 +188,17 @@ func (r *ConnectionRepo) GetConnectionsByUserID(
 	return []ConnectionDTO{}, nil
 }
 
+// TODO: if duplicate, remove old
 func (r *ConnectionRepo) CreateConnection(
 	ctx context.Context,
 	c *ConnectionParams,
 ) (*ConnectionDTO, error) {
-	var newConnection *ConnectionDTO
+	newConnection := &ConnectionDTO{}
 	query := `INSERT INTO connections
         (id, user_id, provider)
         VALUES ($1, $2, $3)
         RETURNING *`
-	if err := r.db.QueryRowxContext(ctx, query, c.ID, c.UserID, c.Provider).Scan(&newConnection); err != nil {
+	if err := r.db.QueryRowxContext(ctx, query, c.ID, c.UserID, c.Provider).StructScan(newConnection); err != nil {
 		return nil, err
 	}
 

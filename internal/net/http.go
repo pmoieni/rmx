@@ -34,7 +34,7 @@ func NewServer(flags *ServerFlags, services ...Service) *Server {
 	setupControllers(mux, services...)
 
 	corsCfg := cors.Options{
-		AllowedOrigins:   []string{"*"}, // ? band-aid, needs to change to a flag
+		AllowedOrigins:   []string{"http://localhost:5173", "http://127.0.0.1:5173"}, // ? band-aid, needs to change to a flag
 		AllowCredentials: true,
 		AllowedMethods:   []string{http.MethodGet, http.MethodPost},
 		AllowedHeaders:   []string{"Origin", "Content-Type", "Accept", "Authorization"},
