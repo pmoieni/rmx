@@ -18,6 +18,11 @@ type Config struct {
 			ClientSecret string `json:"clientSecret"`
 			RedirectURL  string `json:"redirectURL"`
 		} `json:"google"`
+		GitHub struct {
+			ClientID     string `json:"clientID"`
+			ClientSecret string `json:"clientSecret"`
+			RedirectURL  string `json:"redirectURL"`
+		}
 	} `json:"oauth"`
 }
 

@@ -114,10 +114,13 @@ func handleCallback(
 			return
 		}
 
-		if !res.EmailVerified {
-			http.Error(w, errors.New("email not verified").Error(), http.StatusForbidden)
-			return
-		}
+		// TODO: make sure emails are verified from providers
+		/*
+			if !res.EmailVerified {
+				http.Error(w, errors.New("email not verified").Error(), http.StatusForbidden)
+				return
+			}
+		*/
 
 		// create new user, continue if exists
 		// TODO: this should return the created user

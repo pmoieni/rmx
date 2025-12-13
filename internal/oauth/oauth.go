@@ -1,24 +1,23 @@
 package oauth
 
 import (
-	"context"
 	"errors"
 	"net/http"
 	"sync"
 )
 
 type Provider interface {
+	Name() string
 	HandleAuthorizationRequest(http.ResponseWriter, *http.Request)
 	GetCallbackResult(*http.Request) (*CallbackResult, error)
-	VerifyAccessToken(context.Context, string) error
+	// VerifyAccessToken(context.Context, string) error
 }
 
 type CallbackResult struct {
-	Issuer        string
-	UserID        string
-	Email         string
-	EmailVerified bool
-	Token         string
+	RawData map[string]any
+	Issuer  string
+	UserID  string
+	Email   string
 }
 
 type ClientStore struct {

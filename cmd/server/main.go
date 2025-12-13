@@ -8,6 +8,7 @@ import (
 	"github.com/pmoieni/rmx/internal/config"
 	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/oauth"
+	"github.com/pmoieni/rmx/internal/oauth/github"
 	"github.com/pmoieni/rmx/internal/oauth/google"
 	"github.com/pmoieni/rmx/internal/services/jam"
 	"github.com/pmoieni/rmx/internal/services/user"
@@ -54,6 +55,8 @@ func main() {
 
 	clientStore.AddProvider("google",
 		google.NewOIDC(context.Background(), cfg.OAuth.Google.ClientID, cfg.OAuth.Google.ClientSecret, cfg.OAuth.Google.RedirectURL))
+	clientStore.AddProvider("github",
+		github.NewOAuth2(context.Background(), cfg.OAuth.GitHub.ClientID, cfg.OAuth.GitHub.ClientSecret, cfg.OAuth.GitHub.RedirectURL))
 
 	userService, err := user.NewService(userRepo, connectionRepo, tokenRepo, clientStore)
 	if err != nil {
