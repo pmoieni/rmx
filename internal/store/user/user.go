@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"net/mail"
 	"strings"
 	"time"
@@ -14,7 +15,7 @@ import (
 )
 
 var (
-	maxUsernameLength = 15
+	maxUsernameLength = 20
 	minUsernameLength = 1
 
 	errInvalidUsernameError = errors.New("invalid value for Username in UserParams")

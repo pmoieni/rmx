@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	stateLength   uint = 16
-	defaultScopes      = []string{"read:user", "user:email"}
+	stateLength uint = 16
+	// read:user is enabled by default for all GH apps
+	defaultScopes = []string{"read:user", "user:email"}
 
 	ProfileURL = "https://api.github.com/user"
 	EmailURL   = "https://api.github.com/user/emails"
