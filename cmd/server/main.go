@@ -24,10 +24,13 @@ import (
 )
 
 func main() {
+	// Logger
 	var slogHandler = tint.NewHandler(os.Stdout, &tint.Options{TimeFormat: time.Kitchen, AddSource: true, Level: slog.LevelDebug})
+
 	if os.Getenv("APP_ENV") == "prod" {
 		slogHandler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug})
 	}
+
 	buildInfo, _ := debug.ReadBuildInfo()
 
 	logger := slog.New(slogHandler).WithGroup("program_info")
@@ -39,12 +42,15 @@ func main() {
 
 	slog.SetDefault(childLogger)
 
+	// Config
 	cfg, err := config.ScanConfigFile()
 	exit(err)
 
+	// Store
 	dbHandle, err := store.NewDB(context.Background(), cfg.DSN)
 	exit(err)
 
+	// verify DB connection
 	_, err = dbHandle.Exec("SELECT 1")
 	exit(err)
 
@@ -72,6 +78,7 @@ func main() {
 	userService, err := user.NewService(userRepo, connectionRepo, tokenRepo, clientStore)
 	exit(err)
 
+	// Server
 	srv := net.NewServer(&net.ServerFlags{
 		Host: cfg.ServerHost,
 		Port: cfg.ServerPort,
