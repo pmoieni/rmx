@@ -3,24 +3,38 @@ package jam
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/pmoieni/rmx/internal/lib"
-	"github.com/pmoieni/rmx/internal/services/jam"
 	"github.com/pmoieni/rmx/internal/store"
+)
+
+var (
+	maxNameLength      = 30
+	minNameLength      = 1
+	maxCapacity   uint = 10
+	minCapacity   uint = 3
+	maxBPM        uint = 500
+	minBPM        uint = 15
+
+	invalidNameError     = errors.New("invalid value for Name in JamParams")
+	invalidCapacityError = errors.New("invalid value for Capacity in JamParams")
+	invalidBPMError      = errors.New("invalid value for BPM in JamParams")
 )
 
 type JamRepo struct {
 	db *sqlx.DB
 }
 
-func NewJamRepo(db *sqlx.DB) jam.JamRepo {
+func NewJamRepo(db *sqlx.DB) *JamRepo {
 	return &JamRepo{db}
 }
 
-type jamDTO struct {
+type JamDTO struct {
 	ID       uuid.UUID `db:"id"`
 	Name     string    `db:"name"`
 	Capacity uint      `db:"capacity"`
@@ -30,13 +44,48 @@ type jamDTO struct {
 		Username string    `json:"owner_username"`
 		Email    string    `json:"owner_email"`
 	} `db:"owner"`
-	CreatedAt time.Time `db:"create_at"`
-	UpdatedAt time.Time `db:"updated_at"`
-	DeletedAt time.Time `db:"deleted_at"`
+	CreatedAt time.Time    `db:"create_at"`
+	UpdatedAt time.Time    `db:"updated_at"`
+	DeletedAt sql.NullTime `db:"deleted_at"`
 }
 
-func (r *JamRepo) GetJam(ctx context.Context, id uuid.UUID) (*jam.Jam, error) {
-	var j jamDTO
+type JamParams struct {
+	Name     string
+	Capacity uint
+	BPM      uint
+	OwnerID  uuid.UUID
+}
+
+func (p *JamParams) Validate(nullable bool) error {
+	p.trim()
+
+	if !nullable {
+		if p.Name == "" {
+			return invalidNameError
+		}
+	}
+
+	if len(p.Name) < minNameLength || len(p.Name) > maxNameLength {
+		return invalidNameError
+	}
+
+	if p.Capacity < minCapacity || p.Capacity > maxCapacity {
+		return invalidCapacityError
+	}
+
+	if p.BPM < minBPM || p.BPM > maxBPM {
+		return invalidBPMError
+	}
+
+	return nil
+}
+
+func (p *JamParams) trim() {
+	p.Name = strings.TrimSpace(p.Name)
+}
+
+func (r *JamRepo) GetJam(ctx context.Context, id uuid.UUID) (*JamDTO, error) {
+	j := &JamDTO{}
 	query := `SELECT jams.id, jams.name, jams.capacity, jams.bpm,
         json_build_object(
             'owner_id', users.id,
@@ -47,7 +96,7 @@ func (r *JamRepo) GetJam(ctx context.Context, id uuid.UUID) (*jam.Jam, error) {
         INNER JOIN users ON jams.owner_id = users.id
         WHERE jams.id = $1
         AND deleted_at IS NULL`
-	if err := r.db.GetContext(ctx, &j, query, id.String()); err != nil {
+	if err := r.db.GetContext(ctx, j, query, id.String()); err != nil {
 		if err == sql.ErrNoRows {
 			return nil, store.ErrNotFound
 		}
@@ -55,42 +104,39 @@ func (r *JamRepo) GetJam(ctx context.Context, id uuid.UUID) (*jam.Jam, error) {
 		return nil, err
 	}
 
-	return &jam.Jam{
-		ID:        j.ID,
-		Name:      j.Name,
-		Capacity:  j.Capacity,
-		BPM:       j.BPM,
-		Owner:     (*jam.JamOwner)(&j.Owner),
-		CreatedAt: j.CreatedAt,
-		UpdatedAt: j.UpdatedAt,
-		DeletedAt: j.DeletedAt,
-	}, nil
+	return j, nil
 }
 
-func (r *JamRepo) CreateJam(ctx context.Context, j *jam.JamParams) error {
-	if err := j.Validate(false); err != nil {
-		return err
+func (r *JamRepo) CreateJam(ctx context.Context, p *JamParams) (*JamDTO, error) {
+	if err := p.Validate(false); err != nil {
+		return nil, err
 	}
 
+	newJam := &JamDTO{}
 	query := `INSERT INTO jams
         (name, capacity, bpm, owner_id)
         VALUES ($1, $2, $3, $4);`
-	_, err := r.db.ExecContext(ctx, query, j.Name, j.Capacity, j.BPM, j.OwnerID)
-
-	return err
-}
-
-func (r *JamRepo) UpdateJam(ctx context.Context, id uuid.UUID, j *jam.JamParams) error {
-	if err := j.Validate(true); err != nil {
-		return err
+	if err := r.db.QueryRowxContext(ctx, query, p.Name, p.Capacity, p.BPM, p.OwnerID).StructScan(newJam); err != nil {
+		return nil, err
 	}
 
+	return newJam, nil
+}
+
+func (r *JamRepo) UpdateJam(ctx context.Context, id uuid.UUID, p *JamParams) (*JamDTO, error) {
+	if err := p.Validate(true); err != nil {
+		return nil, err
+	}
+
+	updatedJam := &JamDTO{}
 	query := `UPDATE jams
         SET (name = $2, capacity = $3, bpm = $4, owner_id = $5)
         WHERE id=$1`
-	_, err := r.db.ExecContext(ctx, query, id.String(), j.Name, j.Capacity, j.BPM, j.OwnerID)
+	if err := r.db.QueryRowxContext(ctx, query, id.String(), p.Name, p.Capacity, p.BPM, p.OwnerID).StructScan(updatedJam); err != nil {
+		return nil, err
+	}
 
-	return err
+	return updatedJam, nil
 }
 
 func (r *JamRepo) DeleteJam(ctx context.Context, id uuid.UUID) error {

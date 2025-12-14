@@ -11,6 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/jmoiron/sqlx v1.4.0
+	github.com/lmittmann/tint v1.1.2
 	github.com/lucasepe/codename v0.2.0
 	github.com/rs/cors v1.11.1
 	golang.org/x/oauth2 v0.33.0

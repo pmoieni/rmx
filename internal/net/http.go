@@ -66,7 +66,7 @@ func (s *Server) Run(certPath, keyPath string) error {
 	eg, egCtx := errgroup.WithContext(sCtx)
 
 	eg.Go(func() error {
-		slog.Info(fmt.Sprintf("App server starting on %s", s.http.Addr))
+		slog.LogAttrs(sCtx, slog.LevelInfo, "server running", slog.String("addr", s.http.Addr))
 
 		if certPath != "" || keyPath != "" {
 			return s.http.ListenAndServeTLS(certPath, keyPath)
@@ -101,5 +101,21 @@ func setupControllers(mux *http.ServeMux, services ...Service) {
 	for _, service := range services {
 		path := "/" + service.MountPath()
 		mux.Handle(path+"/", http.StripPrefix(path, service))
+	}
+}
+
+type HandlerError struct {
+	Err  error
+	Msg  string
+	Code int
+}
+
+func (e *HandlerError) Error() string { return e.Msg }
+
+type Handler func(w http.ResponseWriter, r *http.Request) *HandlerError
+
+func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if err := h(w, r); err != nil {
+		http.Error(w, err.Msg, err.Code)
 	}
 }
