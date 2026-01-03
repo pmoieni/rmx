@@ -1,20 +1,17 @@
 package user
 
 import (
-	"errors"
 	"hash/fnv"
 	"math/rand"
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lucasepe/codename"
 	"github.com/pmoieni/rmx/internal/lib"
 	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/oauth"
 	"github.com/pmoieni/rmx/internal/services/user/internal/token"
-	"github.com/pmoieni/rmx/internal/store"
 	userStore "github.com/pmoieni/rmx/internal/store/user"
 )
 
@@ -70,27 +67,28 @@ func (s *UserService) MountPath() string {
 }
 
 func (s *UserService) setupControllers() {
-	s.HandleFunc("GET /me", handleUserInfo())
-	s.HandleFunc("GET /auth/login", handleLogin(s.ocs))
-	s.HandleFunc("GET /auth/callback", handleCallback(s.userRepo, s.tokenRepo, s.connectionRepo, s.ocs))
-	s.HandleFunc("GET /auth/refresh", handleRefresh(s.tokenRepo))
+	s.HandleFunc("GET /me", handleUserInfo().ServeHTTP)
+	s.HandleFunc("GET /auth/login", handleLogin(s.ocs).ServeHTTP)
+	s.HandleFunc("GET /auth/callback", handleCallback(s.userRepo, s.tokenRepo, s.connectionRepo, s.ocs).ServeHTTP)
+	s.HandleFunc("GET /auth/refresh", handleRefresh(s.tokenRepo).ServeHTTP)
 }
 
-func handleUserInfo() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func handleUserInfo() net.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		return nil
 	}
 }
 
-func handleLogin(ocs *oauth.ClientStore) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func handleLogin(ocs *oauth.ClientStore) net.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		pName := getProvider(r)
 		provider, err := ocs.GetProvider(pName)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			return err
 		}
 
 		provider.HandleAuthorizationRequest(w, r)
+		return nil
 	}
 }
 
@@ -99,19 +97,17 @@ func handleCallback(
 	tokenRepo TokenRepo,
 	connectionRepo ConnectionRepo,
 	ocs *oauth.ClientStore,
-) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+) net.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		pName := getProvider(r)
 		provider, err := ocs.GetProvider(pName)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			return err
 		}
 
 		res, err := provider.GetCallbackResult(r)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			return err
 		}
 
 		// TODO: make sure emails are verified from providers
@@ -128,18 +124,8 @@ func handleCallback(
 			Username: codename.Generate(codenameRNG, 4),
 			Email:    res.Email,
 		})
-
 		if err != nil {
-			if errors.As(err, new(*store.StoreErr)) {
-				pe := err.(*pgconn.PgError)
-				if pe.Code != "23505" {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			return err
 		}
 
 		if _, err := connectionRepo.CreateConnection(r.Context(), &userStore.ConnectionParams{
@@ -147,41 +133,32 @@ func handleCallback(
 			UserID:   user.ID,
 			Provider: pName,
 		}); err != nil {
-			if errors.As(err, new(*store.StoreErr)) {
-				pe := err.(*pgconn.PgError)
-				if pe.Code != "23505" {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-			} else {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+			return err
 		}
 
-		if err := setToken(w, r, nil, "rmx_at", user.ID.String(), res.Email, accessTokenExpiry); err != nil {
+		if err := setToken(w, nil, "rmx_at", user.ID.String(), res.Email, accessTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 
-		if err := setToken(w, r, tokenRepo, "rmx_rt", user.ID.String(), res.Email, refreshTokenExpiry); err != nil {
+		if err := setToken(w, tokenRepo, "rmx_rt", user.ID.String(), res.Email, refreshTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 
+		return nil
 	}
 }
 
-func handleRefresh(tokenRepo TokenRepo) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func handleRefresh(tokenRepo TokenRepo) net.Handler {
+	return func(w http.ResponseWriter, r *http.Request) error {
 		rt, err := r.Cookie("rmx_rt")
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 		if err := rt.Valid(); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 
 		isValid, err := tokenRepo.IsValid(
@@ -189,51 +166,47 @@ func handleRefresh(tokenRepo TokenRepo) http.HandlerFunc {
 			rt.Value,
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 		if !isValid {
 			http.Error(w, "refresh token reuse detected", http.StatusForbidden)
-			return
+			return nil
 		}
 
 		if err := tokenRepo.List(userStore.ListRefreshToken, rt.Value, refreshTokenExpiry); err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 
 		parsed, err := token.Parse(rt.Value)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 		userID, err := parsed.GetSubject()
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
 		email, ok := parsed.Claims()["email"]
 		if !ok {
 			http.Error(w, "email not found", http.StatusForbidden)
-			return
+			return nil
 		}
 		emailStr := email.(string)
 
-		if err := setToken(w, r, nil, "rmx_at", userID, emailStr, accessTokenExpiry); err != nil {
-			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+		if err := setToken(w, nil, "rmx_at", userID, emailStr, accessTokenExpiry); err != nil {
+			return err
 		}
 
-		if err := setToken(w, r, tokenRepo, "rmx_rt", userID, emailStr, refreshTokenExpiry); err != nil {
+		if err := setToken(w, tokenRepo, "rmx_rt", userID, emailStr, refreshTokenExpiry); err != nil {
 			http.Error(w, err.Error(), http.StatusForbidden)
-			return
+			return err
 		}
+
+		return nil
 	}
 }
 
 func setToken(
 	w http.ResponseWriter,
-	r *http.Request,
 	tokenRepo TokenRepo,
 	name, userID, email string,
 	expiry time.Duration,
@@ -259,7 +232,7 @@ func setToken(
 		Name:     name,
 		Value:    token,
 		MaxAge:   int(expiry),
-		Secure:   r.TLS != nil, // TODO: use false only for debugging
+		Secure:   true, // TODO: use false only for debugging
 		HttpOnly: true,
 	})
 

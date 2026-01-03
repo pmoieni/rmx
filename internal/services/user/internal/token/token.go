@@ -16,6 +16,7 @@ var (
 
 func init() {
 	// TODO: static keys
+	// use new go private mem feature
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
 		panic(err)

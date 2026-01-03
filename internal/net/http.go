@@ -90,6 +90,7 @@ func (s *Server) Shutdown(ctx context.Context, timeout time.Duration) error {
 
 	err := s.http.Shutdown(ctx)
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.LogAttrs(ctx, slog.LevelError, "server shutdown", slog.String("addr", s.http.Addr))
 		slog.Error(fmt.Errorf("server shutdown: %w", err).Error())
 		return err
 	}
@@ -110,12 +111,20 @@ type HandlerError struct {
 	Code int
 }
 
-func (e *HandlerError) Error() string { return e.Msg }
+func (e HandlerError) Error() string { return e.Msg }
 
-type Handler func(w http.ResponseWriter, r *http.Request) *HandlerError
+type Handler func(w http.ResponseWriter, r *http.Request) error
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := h(w, r); err != nil {
-		http.Error(w, err.Msg, err.Code)
+		var handlerError *HandlerError
+		if errors.As(err, &handlerError) {
+			err := err.(HandlerError)
+			http.Error(w, err.Msg, err.Code)
+			return
+		}
+
+		slog.Error(err.Error())
+		http.Error(w, "unexpected error", http.StatusInternalServerError)
 	}
 }

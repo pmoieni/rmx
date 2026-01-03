@@ -3,13 +3,15 @@ package jam
 import (
 	"context"
 	"database/sql"
-	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/pmoieni/rmx/internal/lib"
+	"github.com/pmoieni/rmx/internal/net"
 	"github.com/pmoieni/rmx/internal/store"
 )
 
@@ -20,10 +22,6 @@ var (
 	minCapacity   uint = 3
 	maxBPM        uint = 500
 	minBPM        uint = 15
-
-	invalidNameError     = errors.New("invalid value for Name in JamParams")
-	invalidCapacityError = errors.New("invalid value for Capacity in JamParams")
-	invalidBPMError      = errors.New("invalid value for BPM in JamParams")
 )
 
 type JamRepo struct {
@@ -56,25 +54,41 @@ type JamParams struct {
 	OwnerID  uuid.UUID
 }
 
-func (p *JamParams) Validate(nullable bool) error {
+func (p *JamParams) Validate(nullable bool) *store.StoreErr {
 	p.trim()
 
 	if !nullable {
 		if p.Name == "" {
-			return invalidNameError
+			return &store.StoreErr{
+				Err:  nil,
+				Msg:  "invalid value for Username",
+				Code: http.StatusBadRequest,
+			}
 		}
 	}
 
 	if len(p.Name) < minNameLength || len(p.Name) > maxNameLength {
-		return invalidNameError
+		return &store.StoreErr{
+			Err:  nil,
+			Msg:  "invalid value for Name, Name can be maximum 30 characters long",
+			Code: http.StatusBadRequest,
+		}
 	}
 
 	if p.Capacity < minCapacity || p.Capacity > maxCapacity {
-		return invalidCapacityError
+		return &store.StoreErr{
+			Err:  nil,
+			Msg:  "invalid value for Capacity, Capacity should be in range 3-10",
+			Code: http.StatusBadRequest,
+		}
 	}
 
 	if p.BPM < minBPM || p.BPM > maxBPM {
-		return invalidBPMError
+		return &store.StoreErr{
+			Err:  nil,
+			Msg:  "invalid value for BPM, BPM should be in range 15-500",
+			Code: http.StatusBadRequest,
+		}
 	}
 
 	return nil
@@ -98,10 +112,18 @@ func (r *JamRepo) GetJam(ctx context.Context, id uuid.UUID) (*JamDTO, error) {
         AND deleted_at IS NULL`
 	if err := r.db.GetContext(ctx, j, query, id.String()); err != nil {
 		if err == sql.ErrNoRows {
-			return nil, store.ErrNotFound
+			return nil, net.HandlerError{
+				Err:  nil,
+				Msg:  fmt.Sprintf("unable to find Jam with id [%s]", id.String()),
+				Code: http.StatusNotFound,
+			}
 		}
 
-		return nil, err
+		return nil, store.StoreErr{
+			Err:  err,
+			Msg:  fmt.Sprintf("unexpected error trying to find Jam with id [%s]", id.String()),
+			Code: http.StatusInternalServerError,
+		}
 	}
 
 	return j, nil
@@ -109,7 +131,7 @@ func (r *JamRepo) GetJam(ctx context.Context, id uuid.UUID) (*JamDTO, error) {
 
 func (r *JamRepo) CreateJam(ctx context.Context, p *JamParams) (*JamDTO, error) {
 	if err := p.Validate(false); err != nil {
-		return nil, err
+		return nil, *err
 	}
 
 	newJam := &JamDTO{}
@@ -117,7 +139,11 @@ func (r *JamRepo) CreateJam(ctx context.Context, p *JamParams) (*JamDTO, error) 
         (name, capacity, bpm, owner_id)
         VALUES ($1, $2, $3, $4);`
 	if err := r.db.QueryRowxContext(ctx, query, p.Name, p.Capacity, p.BPM, p.OwnerID).StructScan(newJam); err != nil {
-		return nil, err
+		return nil, store.StoreErr{
+			Err:  err,
+			Msg:  "unexpected error trying to insert Jam",
+			Code: http.StatusInternalServerError,
+		}
 	}
 
 	return newJam, nil
